@@ -95,7 +95,7 @@ stringData:
               service: '{{ .CommonLabels.service }}'
               cluster: 'solidarytech-cluster'
         slack_configs:
-          - api_url: '<DISCORD_WEBHOOK_URL>/slack'
+          - api_url: 'https://discord.com/api/webhooks/1531428235865362432/Uy7NTeKYCjwomIUd4twuEfDU9V3v6e8dhz1FsIx1WBlZbsybZ3H_ozrey6Y0XL8Ajtnl/slack'
             channel: '#alerts'
             send_resolved: true
             title: 'CRITICAL: {{ .CommonLabels.alertname }}'
