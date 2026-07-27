@@ -292,18 +292,18 @@ jobs:
           echo "✅ kubectl configured for $CLUSTER_NAME"
 
       - name: Generate and apply K8s secrets
-        working-directory: terraform/environments/primary
         env:
           ACCOUNT_ID: ${{ needs.pre-flight.outputs.account_id }}
         run: |
+          pushd terraform/environments/primary > /dev/null
           BUCKET="tc5-solidarytech-tfstate-${ACCOUNT_ID}"
           TABLE="tc5-solidarytech-tflock-${ACCOUNT_ID}"
           terraform init -reconfigure \
             -backend-config="bucket=${BUCKET}" \
             -backend-config="dynamodb_table=${TABLE}" \
             -input=false > /dev/null 2>&1
+          popd > /dev/null
 
-          cd - > /dev/null
           ./scripts/generate-secrets.sh
           ./scripts/apply-secrets.sh
           echo "✅ K8s secrets gerados e aplicados"
