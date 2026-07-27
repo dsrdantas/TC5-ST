@@ -106,10 +106,6 @@ config:
         processors: [memory_limiter, resource, batch]
         exporters: [otlphttp/loki, debug]
 
-    telemetry:
-      metrics:
-        address: 0.0.0.0:8888
-
 # Descomente para habilitar APM no New Relic:
 # extraEnvs:
 #   - name: NEW_RELIC_LICENSE_KEY
