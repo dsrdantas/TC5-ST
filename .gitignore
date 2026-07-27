@@ -1,0 +1,48 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+!terraform.tfvars.example
+
+# Environment files
+.env
+!.env.example
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.egg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Local development
+/local/postgres-data/
+/local/.env
+.claude/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Logs
+*.log
+/tmp/
