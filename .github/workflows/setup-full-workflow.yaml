@@ -276,13 +276,10 @@ jobs:
             -backend-config="dynamodb_table=${TABLE}" \
             -input=false -no-color > /dev/null
 
-          CLUSTER_NAME=$(terraform output -raw cluster_name)
-          REGION=$(terraform output -raw region)
-
-          cat >> $GITHUB_ENV << EOF
-          CLUSTER_NAME=$CLUSTER_NAME
-          REGION=$REGION
-          EOF
+          CLUSTER_NAME=$(terraform output -raw cluster_name 2>/dev/null)
+          REGION=$(terraform output -raw region 2>/dev/null)
+          echo "CLUSTER_NAME=$CLUSTER_NAME" >> "$GITHUB_ENV"
+          echo "REGION=$REGION" >> "$GITHUB_ENV"
 
           aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$REGION"
           echo "✅ kubectl configured for $CLUSTER_NAME"
