@@ -224,8 +224,11 @@ jobs:
 
           CLUSTER_NAME=$(terraform output -raw cluster_name)
           REGION=$(terraform output -raw region)
-          echo "CLUSTER_NAME=$CLUSTER_NAME" >> $GITHUB_ENV
-          echo "REGION=$REGION" >> $GITHUB_ENV
+
+          cat >> $GITHUB_ENV << EOF
+          CLUSTER_NAME=$CLUSTER_NAME
+          REGION=$REGION
+          EOF
 
           aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$REGION"
           echo "✅ kubectl configured for $CLUSTER_NAME (DR)"
