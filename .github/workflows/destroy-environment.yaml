@@ -85,11 +85,30 @@ jobs:
             -backend-config="bucket=${BUCKET}" \
             -backend-config="dynamodb_table=${TABLE}"
 
+      - name: Pre-cleanup Helm releases (Primary)
+        run: |
+          echo "⏳ Cleaning up Helm releases..."
+          helm uninstall prometheus -n monitoring 2>/dev/null || true
+          helm uninstall loki -n monitoring 2>/dev/null || true
+          helm uninstall promtail -n monitoring 2>/dev/null || true
+          helm uninstall otel-collector -n monitoring 2>/dev/null || true
+          helm uninstall argocd -n argocd 2>/dev/null || true
+          echo "✅ Helm releases cleaned"
+
+      - name: Pre-cleanup Kubernetes namespaces (Primary)
+        run: |
+          echo "⏳ Deleting namespaces (will delete LoadBalancers)..."
+          kubectl delete namespace solidarytech --ignore-not-found 2>/dev/null || true
+          kubectl delete namespace monitoring --ignore-not-found 2>/dev/null || true
+          kubectl delete namespace argocd --ignore-not-found 2>/dev/null || true
+          kubectl delete namespace ingress-nginx --ignore-not-found 2>/dev/null || true
+          echo "✅ Namespaces deleted"
+
       - name: Terraform Destroy (Primary)
         working-directory: terraform/environments/primary
         run: |
           echo "🔥 Destroying PRIMARY environment (us-east-1)..."
-          terraform destroy -auto-approve -input=false
+          terraform destroy -auto-approve -input=false -parallelism=10
           echo "✅ PRIMARY destroyed"
 
   # ============================================================================
@@ -135,11 +154,30 @@ jobs:
             -backend-config="bucket=${BUCKET}" \
             -backend-config="dynamodb_table=${TABLE}"
 
+      - name: Pre-cleanup Helm releases (DR)
+        run: |
+          echo "⏳ Cleaning up Helm releases..."
+          helm uninstall prometheus -n monitoring 2>/dev/null || true
+          helm uninstall loki -n monitoring 2>/dev/null || true
+          helm uninstall promtail -n monitoring 2>/dev/null || true
+          helm uninstall otel-collector -n monitoring 2>/dev/null || true
+          helm uninstall argocd -n argocd 2>/dev/null || true
+          echo "✅ Helm releases cleaned"
+
+      - name: Pre-cleanup Kubernetes namespaces (DR)
+        run: |
+          echo "⏳ Deleting namespaces (will delete LoadBalancers)..."
+          kubectl delete namespace solidarytech --ignore-not-found 2>/dev/null || true
+          kubectl delete namespace monitoring --ignore-not-found 2>/dev/null || true
+          kubectl delete namespace argocd --ignore-not-found 2>/dev/null || true
+          kubectl delete namespace ingress-nginx --ignore-not-found 2>/dev/null || true
+          echo "✅ Namespaces deleted"
+
       - name: Terraform Destroy (DR)
         working-directory: terraform/environments/dr
         run: |
           echo "🔥 Destroying DR environment (us-west-2)..."
-          terraform destroy -auto-approve -input=false
+          terraform destroy -auto-approve -input=false -parallelism=10
           echo "✅ DR destroyed"
 
   # ============================================================================
