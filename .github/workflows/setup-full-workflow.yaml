@@ -291,6 +291,34 @@ jobs:
           aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$REGION"
           echo "✅ kubectl configured for $CLUSTER_NAME"
 
+      - name: Generate and apply K8s secrets
+        working-directory: terraform/environments/primary
+        env:
+          ACCOUNT_ID: ${{ needs.pre-flight.outputs.account_id }}
+        run: |
+          BUCKET="tc5-solidarytech-tfstate-${ACCOUNT_ID}"
+          TABLE="tc5-solidarytech-tflock-${ACCOUNT_ID}"
+          terraform init -reconfigure \
+            -backend-config="bucket=${BUCKET}" \
+            -backend-config="dynamodb_table=${TABLE}" \
+            -input=false > /dev/null 2>&1
+
+          cd - > /dev/null
+          ./scripts/generate-secrets.sh
+          ./scripts/apply-secrets.sh
+          echo "✅ K8s secrets gerados e aplicados"
+
+      - name: Substitute placeholders in deployments
+        env:
+          ACCOUNT_ID: ${{ needs.pre-flight.outputs.account_id }}
+        run: |
+          for svc in ngo-service donation-service volunteer-service; do
+            MANIFEST="gitops/$svc/deployment.yaml"
+            sed -i.bak "s|<AWS_ACCOUNT_ID>|${ACCOUNT_ID}|g" "$MANIFEST"
+            rm -f "$MANIFEST.bak"
+          done
+          echo "✅ Placeholders substituídos"
+
       - name: Update GitOps manifests with new image tags
         env:
           GITHUB_SHA: ${{ github.sha }}

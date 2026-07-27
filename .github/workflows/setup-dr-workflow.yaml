@@ -258,6 +258,17 @@ jobs:
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.0/deploy/static/provider/aws/deploy.yaml 2>/dev/null || true
           echo "✅ NGINX Ingress installed (DR)"
 
+      - name: Substitute placeholders in deployments (DR)
+        env:
+          ACCOUNT_ID: ${{ needs.pre-flight.outputs.account_id }}
+        run: |
+          for svc in ngo-service donation-service volunteer-service; do
+            MANIFEST="gitops/$svc/deployment.yaml"
+            sed -i.bak "s|<AWS_ACCOUNT_ID>|${ACCOUNT_ID}|g" "$MANIFEST"
+            rm -f "$MANIFEST.bak"
+          done
+          echo "✅ Placeholders substituídos"
+
       - name: Deploy applications via ArgoCD (DR)
         env:
           GITHUB_USER: ${{ github.repository_owner }}
