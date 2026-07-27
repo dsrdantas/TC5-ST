@@ -11,7 +11,7 @@ kubernetes_version = "1.31"
 
 # PostgreSQL version. Descobrir com:
 # aws rds describe-db-engine-versions --engine postgres --region us-east-1 --query 'DBEngineVersions[?Engine==`postgres`].EngineVersion' --output text
-postgres_version = "16.3"
+postgres_version = "16.14"
 
 # Repository Git para tagging. Ex: github.com/seu-usuario/seu-repo
 repository = "github.com/dsrdantas/TC5-ST"

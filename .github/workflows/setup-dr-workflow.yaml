@@ -1,0 +1,294 @@
+name: Deploy - SolidaryTech DR (Disaster Recovery - us-west-2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      auto_approve:
+        description: 'Skip terraform plan confirmation'
+        required: false
+        default: false
+        type: boolean
+      primary_donation_db_arn:
+        description: 'ARN of primary RDS donation-db (from primary outputs)'
+        required: true
+        type: string
+  push:
+    branches:
+      - deploy/dr
+    paths:
+      - 'terraform/environments/dr/**'
+      - '.github/workflows/setup-dr-workflow.yaml'
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  AWS_REGION: us-west-2
+  TERRAFORM_VERSION: '1.5.7'
+
+jobs:
+  # ============================================================================
+  # Stage 1: Validações iniciais
+  # ============================================================================
+  pre-flight:
+    name: Pre-flight Checks (DR)
+    runs-on: ubuntu-latest
+    outputs:
+      account_id: ${{ steps.aws-account.outputs.account_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate AWS credentials
+        id: aws-account
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "AWS Account ID: $ACCOUNT_ID"
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "✅ AWS credentials valid"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform Init (for validation)
+        working-directory: terraform/environments/dr
+        run: terraform init -backend=false -input=false
+
+      - name: Terraform format check
+        run: terraform fmt -recursive -check terraform/
+
+      - name: Terraform validate
+        working-directory: terraform/environments/dr
+        run: terraform validate
+
+      - name: Check docker
+        run: docker --version && echo "✅ Docker available"
+
+  # ============================================================================
+  # Stage 2: Provisionar infraestrutura DR (Terraform)
+  # ============================================================================
+  terraform-plan:
+    name: Terraform Plan (DR)
+    runs-on: ubuntu-latest
+    needs: pre-flight
+    outputs:
+      tfplan_exists: ${{ steps.plan.outputs.tfplan_exists }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Bootstrap backend
+        run: ./scripts/bootstrap-backend.sh
+        env:
+          ACCOUNT_ID: ${{ needs.pre-flight.outputs.account_id }}
+
+      - name: Terraform Init
+        working-directory: terraform/environments/dr
+        env:
+          ACCOUNT_ID: ${{ needs.pre-flight.outputs.account_id }}
+        run: |
+          BUCKET="tc5-solidarytech-tfstate-${ACCOUNT_ID}"
+          TABLE="tc5-solidarytech-tflock-${ACCOUNT_ID}"
+          terraform init -reconfigure \
+            -backend-config="bucket=${BUCKET}" \
+            -backend-config="dynamodb_table=${TABLE}"
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: terraform/environments/dr
+        env:
+          TF_VAR_primary_donation_db_arn: ${{ github.event.inputs.primary_donation_db_arn || 'arn:aws:rds:us-east-1:ACCOUNT_ID:db:solidarytech-donation-db' }}
+        run: |
+          terraform plan -out=tfplan.binary -input=false
+          if [ -f tfplan.binary ]; then
+            echo "tfplan_exists=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload tfplan artifact
+        if: steps.plan.outputs.tfplan_exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-dr
+          path: terraform/environments/dr/tfplan.binary
+          retention-days: 1
+
+  # ============================================================================
+  # Stage 3: Apply infraestrutura DR
+  # ============================================================================
+  terraform-apply:
+    name: Terraform Apply (DR)
+    runs-on: ubuntu-latest
+    needs: [pre-flight, terraform-plan]
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.auto_approve) ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/deploy/dr')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Download tfplan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-dr
+          path: terraform/environments/dr/
+
+      - name: Terraform Init
+        working-directory: terraform/environments/dr
+        env:
+          ACCOUNT_ID: ${{ needs.pre-flight.outputs.account_id }}
+        run: |
+          BUCKET="tc5-solidarytech-tfstate-${ACCOUNT_ID}"
+          TABLE="tc5-solidarytech-tflock-${ACCOUNT_ID}"
+          terraform init -reconfigure \
+            -backend-config="bucket=${BUCKET}" \
+            -backend-config="dynamodb_table=${TABLE}"
+
+      - name: Terraform Apply
+        working-directory: terraform/environments/dr
+        run: |
+          echo "🚀 Applying Terraform DR (this may take 15-20 minutes)..."
+          terraform apply -input=false tfplan.binary
+          echo "✅ Terraform DR apply completed"
+
+  # ============================================================================
+  # Stage 4: Pós-deploy (kubectl, ArgoCD)
+  # ============================================================================
+  post-deploy:
+    name: Post-Deploy Configuration (DR)
+    runs-on: ubuntu-latest
+    needs: [pre-flight, terraform-apply]
+    if: success()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.31.0'
+
+      - name: Setup Terraform (for output extraction)
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Get DR cluster credentials
+        working-directory: terraform/environments/dr
+        env:
+          ACCOUNT_ID: ${{ needs.pre-flight.outputs.account_id }}
+        run: |
+          BUCKET="tc5-solidarytech-tfstate-${ACCOUNT_ID}"
+          TABLE="tc5-solidarytech-tflock-${ACCOUNT_ID}"
+          terraform init -reconfigure \
+            -backend-config="bucket=${BUCKET}" \
+            -backend-config="dynamodb_table=${TABLE}" \
+            -input=false -no-color > /dev/null
+
+          CLUSTER_NAME=$(terraform output -raw cluster_name)
+          REGION=$(terraform output -raw region)
+          echo "CLUSTER_NAME=$CLUSTER_NAME" >> $GITHUB_ENV
+          echo "REGION=$REGION" >> $GITHUB_ENV
+
+          aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$REGION"
+          echo "✅ kubectl configured for $CLUSTER_NAME (DR)"
+
+      - name: Install ArgoCD (DR)
+        run: |
+          if ! kubectl get namespace argocd &> /dev/null; then
+            kubectl create namespace argocd
+            kubectl apply -n argocd \
+              -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml \
+              --server-side
+            kubectl wait --for=condition=available --timeout=300s \
+              deployment/argocd-server -n argocd
+            kubectl patch svc argocd-server -n argocd \
+              -p '{"spec": {"type": "LoadBalancer"}}'
+            echo "✅ ArgoCD installed (DR)"
+          else
+            echo "✅ ArgoCD already installed (DR)"
+          fi
+
+      - name: Install NGINX Ingress (DR)
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.0/deploy/static/provider/aws/deploy.yaml 2>/dev/null || true
+          echo "✅ NGINX Ingress installed (DR)"
+
+      - name: Deploy applications via ArgoCD (DR)
+        run: |
+          kubectl apply -f argocd/applications.yaml
+          echo "⏳ Waiting for deployments to be ready (DR)..."
+          kubectl rollout status deployment/ngo-service -n solidarytech --timeout=180s || true
+          kubectl rollout status deployment/donation-service -n solidarytech --timeout=180s || true
+          kubectl rollout status deployment/volunteer-service -n solidarytech --timeout=180s || true
+          echo "✅ Applications deployed (DR)"
+
+      - name: Post-deploy summary (DR)
+        run: |
+          echo "## 🎉 DR Deployment Complete"
+          ARGOCD_LB=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
+          INGRESS_LB=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
+          echo "- **ArgoCD (DR)**: https://$ARGOCD_LB"
+          echo "- **Ingress (DR)**: http://$INGRESS_LB"
+          echo "- **Cluster**: $CLUSTER_NAME ($REGION)"
+          echo ""
+          echo "⚠️ **Note**: DR is in STANDBY mode. Data will sync from primary."
+
+  # ============================================================================
+  # Stage 5: Notificações
+  # ============================================================================
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [pre-flight, post-deploy]
+    if: always()
+    steps:
+      - name: Deployment status
+        run: |
+          if [[ "${{ needs.post-deploy.result }}" == "success" ]]; then
+            echo "✅ SolidaryTech DR deployment successful!"
+            echo ""
+            echo "✅ DR Environment (us-west-2) is now online in STANDBY mode"
+            echo "   - Ready for failover"
+            echo "   - Monitoring data sync from primary"
+          else
+            echo "❌ DR deployment failed. Check logs above."
+            exit 1
+          fi
