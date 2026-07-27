@@ -85,7 +85,7 @@ jobs:
   build-images:
     name: Build & Push Images to ECR
     runs-on: ubuntu-latest
-    needs: pre-flight
+    needs: [pre-flight, terraform-apply]
     steps:
       - uses: actions/checkout@v4
 
@@ -179,7 +179,7 @@ jobs:
 
       - name: Upload tfplan artifact
         if: steps.plan.outputs.tfplan_exists == 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: terraform/environments/primary/tfplan.binary
@@ -191,7 +191,7 @@ jobs:
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: [pre-flight, terraform-plan, build-images]
+    needs: [pre-flight, terraform-plan]
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.auto_approve) ||
       (github.event_name == 'push' && github.ref == 'refs/heads/deploy/main')
@@ -212,7 +212,7 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Download tfplan artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfplan
           path: terraform/environments/primary/
