@@ -276,8 +276,22 @@ jobs:
             -backend-config="dynamodb_table=${TABLE}" \
             -input=false > /dev/null 2>&1
 
-          CLUSTER_NAME=$(terraform output -json cluster_name | jq -r .)
-          REGION=$(terraform output -json region | jq -r .)
+          echo "🔍 Available outputs:"
+          terraform output 2>&1 || echo "No outputs found"
+
+          echo ""
+          echo "🔍 Raw cluster_name output:"
+          terraform output cluster_name 2>&1 | head -5 || echo "Error reading cluster_name"
+
+          echo ""
+          echo "🔍 Raw region output:"
+          terraform output region 2>&1 | head -5 || echo "Error reading region"
+
+          CLUSTER_NAME=$(terraform output -raw cluster_name 2>&1 | grep -v '^[[:space:]]*$' | head -1)
+          REGION=$(terraform output -raw region 2>&1 | grep -v '^[[:space:]]*$' | head -1)
+
+          echo "CLUSTER_NAME=$CLUSTER_NAME"
+          echo "REGION=$REGION"
 
           {
             echo "CLUSTER_NAME=$CLUSTER_NAME"

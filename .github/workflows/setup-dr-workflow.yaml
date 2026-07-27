@@ -222,8 +222,11 @@ jobs:
             -backend-config="dynamodb_table=${TABLE}" \
             -input=false > /dev/null 2>&1
 
-          CLUSTER_NAME=$(terraform output -json cluster_name | jq -r .)
-          REGION=$(terraform output -json region | jq -r .)
+          terraform output cluster_name > /tmp/cluster_name.txt 2>&1
+          terraform output region > /tmp/region.txt 2>&1
+
+          CLUSTER_NAME=$(cat /tmp/cluster_name.txt | tr -d '\n' | sed 's/::.*//g')
+          REGION=$(cat /tmp/region.txt | tr -d '\n' | sed 's/::.*//g')
 
           {
             echo "CLUSTER_NAME=$CLUSTER_NAME"
