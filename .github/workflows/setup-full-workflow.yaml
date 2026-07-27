@@ -319,28 +319,14 @@ jobs:
           done
           echo "✅ Placeholders substituídos"
 
-      - name: Update GitOps manifests with new image tags
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-          ACCOUNT_ID: ${{ needs.pre-flight.outputs.account_id }}
+      - name: Verify GitOps manifests have latest tag
         run: |
-          ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com"
-          IMAGE_TAG="${GITHUB_SHA::7}"
-
           for svc in ngo-service donation-service volunteer-service; do
-            MANIFEST="gitops/$svc/deployment.yaml"
-            sed -i.bak "s|image: ${ECR_REGISTRY}/${svc}:.*|image: ${ECR_REGISTRY}/${svc}:${IMAGE_TAG}|g" "$MANIFEST"
-            rm -f "$MANIFEST.bak"
+            if ! grep -q "image:.*${svc}:latest" gitops/$svc/deployment.yaml; then
+              echo "⚠️  Warning: $svc deployment not using :latest tag"
+            fi
           done
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add gitops/
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: update image tags to $IMAGE_TAG"
-            git push origin main
-            echo "✅ GitOps manifests updated"
-          fi
+          echo "✅ GitOps manifests verified (using :latest)"
 
       - name: Install ArgoCD
         run: |
