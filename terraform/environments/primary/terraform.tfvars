@@ -18,7 +18,7 @@ repository = "github.com/dsrdantas/TC5-ST"
 
 # Master password dos RDS. NUNCA commitar este arquivo (esta no .gitignore).
 db_username = "solidary"
-db_password = "1234abc"
+db_password = "NacpHvF2rLXPnQ=="
 
 # Nodes do EKS. Minimo 3 (decisao herdada FASE 4): t3.medium tem limite
 # de ~17 pods/node via AWS VPC CNI; com monitoring+ArgoCD+microsservicos,
