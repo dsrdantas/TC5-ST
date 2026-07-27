@@ -51,10 +51,11 @@ fi
 log_info "Lendo terraform outputs..."
 cd "$ENV_DIR"
 
-NGO_DB_ADDRESS=$(terraform output -raw ngo_db_address)
-DONATION_DB_ADDRESS=$(terraform output -raw donation_db_address)
-SQS_QUEUE_URL=$(terraform output -raw sqs_queue_url)
-DYNAMODB_TABLE=$(terraform output -raw dynamodb_table_name)
+OUTPUTS=$(terraform output -no-color 2>&1)
+NGO_DB_ADDRESS=$(echo "$OUTPUTS" | grep '^ngo_db_address ' | awk -F ' = ' '{print $2}' | tr -d '"')
+DONATION_DB_ADDRESS=$(echo "$OUTPUTS" | grep '^donation_db_address ' | awk -F ' = ' '{print $2}' | tr -d '"')
+SQS_QUEUE_URL=$(echo "$OUTPUTS" | grep '^sqs_queue_url ' | awk -F ' = ' '{print $2}' | tr -d '"')
+DYNAMODB_TABLE=$(echo "$OUTPUTS" | grep '^dynamodb_table_name ' | awk -F ' = ' '{print $2}' | tr -d '"')
 
 # DB creds do tfvars com fallback para defaults (evita set -e matar o
 # script se tfvars minimo — ex: gerado pelo destroy-all.sh)
