@@ -259,8 +259,10 @@ jobs:
           echo "✅ NGINX Ingress installed (DR)"
 
       - name: Deploy applications via ArgoCD (DR)
+        env:
+          GITHUB_USER: ${{ github.repository_owner }}
         run: |
-          kubectl apply -f argocd/applications.yaml
+          sed "s|<GITHUB_USER>|${GITHUB_USER}|g" argocd/applications.yaml | kubectl apply -f -
           echo "⏳ Waiting for deployments to be ready (DR)..."
           kubectl rollout status deployment/ngo-service -n solidarytech --timeout=180s || true
           kubectl rollout status deployment/donation-service -n solidarytech --timeout=180s || true
