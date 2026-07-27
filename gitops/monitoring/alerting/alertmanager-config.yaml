@@ -70,7 +70,7 @@ stringData:
       # ----------------------------------------------------------------
       - name: 'solidarytech-default'
         slack_configs:
-          - api_url: '<DISCORD_WEBHOOK_URL>/slack'
+          - api_url: 'https://discord.com/api/webhooks/1531428235865362432/Uy7NTeKYCjwomIUd4twuEfDU9V3v6e8dhz1FsIx1WBlZbsybZ3H_ozrey6Y0XL8Ajtnl/slack'
             channel: '#alerts'
             send_resolved: true
             title: '{{ .CommonLabels.alertname }}'
@@ -87,7 +87,7 @@ stringData:
       # ----------------------------------------------------------------
       - name: 'solidarytech-critical'
         pagerduty_configs:
-          - routing_key: '<PAGERDUTY_INTEGRATION_KEY>'
+          - routing_key: 'f346325d728f450cc01b4f6d3345623b'
             severity: critical
             description: '[CRITICAL] {{ .CommonLabels.alertname }} — {{ .CommonLabels.service }}'
             details:
@@ -116,7 +116,7 @@ stringData:
       # ----------------------------------------------------------------
       - name: 'solidarytech-warning'
         slack_configs:
-          - api_url: '<DISCORD_WEBHOOK_URL>/slack'
+          - api_url: 'https://discord.com/api/webhooks/1531428235865362432/Uy7NTeKYCjwomIUd4twuEfDU9V3v6e8dhz1FsIx1WBlZbsybZ3H_ozrey6Y0XL8Ajtnl/slack'
             channel: '#alerts'
             send_resolved: true
             title: 'WARNING: {{ .CommonLabels.alertname }}'

@@ -100,6 +100,15 @@ echo ""
 log_ok "Stack instalada"
 
 # -------------------------------------------------------
+# Aplicar Alertmanager config
+# -------------------------------------------------------
+if [ -f "$MONITORING_DIR/alerting/alertmanager-config.yaml" ]; then
+    log_info "Aplicando configuração do Alertmanager..."
+    kubectl apply -f "$MONITORING_DIR/alerting/alertmanager-config.yaml"
+    log_ok "Alertmanager config aplicada"
+fi
+
+# -------------------------------------------------------
 # Aplicar PrometheusRules customizadas (SLO + Hot Path)
 # -------------------------------------------------------
 if [ -f "$MONITORING_DIR/alerting/prometheus-rules.yaml" ]; then
@@ -163,11 +172,18 @@ echo "OTel Collector (endpoint para os microsservicos):"
 echo "  gRPC: otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4317"
 echo "  HTTP: otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4318"
 echo ""
-if ! kubectl get secret newrelic-license-key -n monitoring > /dev/null 2>&1; then
-    log_warn "Secret newrelic-license-key NAO aplicado — distributed tracing nao ira pro New Relic"
-    echo "  Aplicar com:"
+# -------------------------------------------------------
+# New Relic Secret (APM)
+# -------------------------------------------------------
+NEWRELIC_SECRET_FILE="$MONITORING_DIR/newrelic-secret.yaml"
+if [ -f "$NEWRELIC_SECRET_FILE" ]; then
+    log_info "Aplicando New Relic secret..."
+    kubectl apply -f "$NEWRELIC_SECRET_FILE"
+    log_ok "New Relic secret aplicado"
+else
+    log_warn "New Relic secret NAO encontrado — distributed tracing desativado"
+    echo "  Para ativar New Relic APM:"
     echo "    cp gitops/monitoring/newrelic-secret.yaml.example gitops/monitoring/newrelic-secret.yaml"
-    echo "    # editar a license-key"
-    echo "    kubectl apply -f gitops/monitoring/newrelic-secret.yaml"
-    echo "    kubectl rollout restart deployment/otel-collector-opentelemetry-collector -n monitoring"
+    echo "    # editar com sua license-key"
+    echo "    ./scripts/install-monitoring.sh  (ou helm upgrade otel-collector)"
 fi

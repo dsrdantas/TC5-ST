@@ -85,24 +85,46 @@ jobs:
             -backend-config="bucket=${BUCKET}" \
             -backend-config="dynamodb_table=${TABLE}"
 
-      - name: Pre-cleanup Helm releases (Primary)
+      - name: Pre-cleanup Kubernetes resources (Primary)
         run: |
-          echo "⏳ Cleaning up Helm releases..."
-          helm uninstall prometheus -n monitoring 2>/dev/null || true
-          helm uninstall loki -n monitoring 2>/dev/null || true
-          helm uninstall promtail -n monitoring 2>/dev/null || true
-          helm uninstall otel-collector -n monitoring 2>/dev/null || true
-          helm uninstall argocd -n argocd 2>/dev/null || true
-          echo "✅ Helm releases cleaned"
+          echo "⏳ Cleaning up Kubernetes resources..."
 
-      - name: Pre-cleanup Kubernetes namespaces (Primary)
+          # Delete namespaces (will cascade delete everything inside)
+          echo "Deleting namespaces..."
+          kubectl delete namespace solidarytech --ignore-not-found --wait=true 2>/dev/null || true
+          kubectl delete namespace monitoring --ignore-not-found --wait=true 2>/dev/null || true
+          kubectl delete namespace argocd --ignore-not-found --wait=true 2>/dev/null || true
+          kubectl delete namespace ingress-nginx --ignore-not-found --wait=true 2>/dev/null || true
+
+          # Wait for LoadBalancers to be deleted (they release ENIs and Elastic IPs)
+          echo "Waiting for LoadBalancers to be released..."
+          sleep 45
+
+          echo "✅ Kubernetes resources cleaned"
+
+      - name: Cleanup AWS Network Resources (Primary)
         run: |
-          echo "⏳ Deleting namespaces (will delete LoadBalancers)..."
-          kubectl delete namespace solidarytech --ignore-not-found 2>/dev/null || true
-          kubectl delete namespace monitoring --ignore-not-found 2>/dev/null || true
-          kubectl delete namespace argocd --ignore-not-found 2>/dev/null || true
-          kubectl delete namespace ingress-nginx --ignore-not-found 2>/dev/null || true
-          echo "✅ Namespaces deleted"
+          echo "⏳ Cleaning up orphaned AWS resources..."
+
+          # Release unassociated Elastic IPs
+          UNASSOC_IPS=$(aws ec2 describe-addresses --region us-east-1 --query 'Addresses[?AssociationId==null].AllocationId' --output text 2>/dev/null || true)
+          if [ -n "$UNASSOC_IPS" ]; then
+            echo "Releasing Elastic IPs: $UNASSOC_IPS"
+            for ip in $UNASSOC_IPS; do
+              aws ec2 release-address --allocation-id "$ip" --region us-east-1 2>/dev/null || true
+            done
+          fi
+
+          # Delete orphaned ENIs
+          ORPHAN_ENIS=$(aws ec2 describe-network-interfaces --region us-east-1 --query 'NetworkInterfaces[?Status==`available`].NetworkInterfaceId' --output text 2>/dev/null || true)
+          if [ -n "$ORPHAN_ENIS" ]; then
+            echo "Deleting orphaned ENIs: $ORPHAN_ENIS"
+            for eni in $ORPHAN_ENIS; do
+              aws ec2 delete-network-interface --network-interface-id "$eni" --region us-east-1 2>/dev/null || true
+            done
+          fi
+
+          echo "✅ AWS resources cleaned"
 
       - name: Terraform Destroy (Primary)
         working-directory: terraform/environments/primary
@@ -154,24 +176,46 @@ jobs:
             -backend-config="bucket=${BUCKET}" \
             -backend-config="dynamodb_table=${TABLE}"
 
-      - name: Pre-cleanup Helm releases (DR)
+      - name: Pre-cleanup Kubernetes resources (DR)
         run: |
-          echo "⏳ Cleaning up Helm releases..."
-          helm uninstall prometheus -n monitoring 2>/dev/null || true
-          helm uninstall loki -n monitoring 2>/dev/null || true
-          helm uninstall promtail -n monitoring 2>/dev/null || true
-          helm uninstall otel-collector -n monitoring 2>/dev/null || true
-          helm uninstall argocd -n argocd 2>/dev/null || true
-          echo "✅ Helm releases cleaned"
+          echo "⏳ Cleaning up Kubernetes resources..."
 
-      - name: Pre-cleanup Kubernetes namespaces (DR)
+          # Delete namespaces (will cascade delete everything inside)
+          echo "Deleting namespaces..."
+          kubectl delete namespace solidarytech --ignore-not-found --wait=true 2>/dev/null || true
+          kubectl delete namespace monitoring --ignore-not-found --wait=true 2>/dev/null || true
+          kubectl delete namespace argocd --ignore-not-found --wait=true 2>/dev/null || true
+          kubectl delete namespace ingress-nginx --ignore-not-found --wait=true 2>/dev/null || true
+
+          # Wait for LoadBalancers to be deleted (they release ENIs and Elastic IPs)
+          echo "Waiting for LoadBalancers to be released..."
+          sleep 45
+
+          echo "✅ Kubernetes resources cleaned"
+
+      - name: Cleanup AWS Network Resources (DR)
         run: |
-          echo "⏳ Deleting namespaces (will delete LoadBalancers)..."
-          kubectl delete namespace solidarytech --ignore-not-found 2>/dev/null || true
-          kubectl delete namespace monitoring --ignore-not-found 2>/dev/null || true
-          kubectl delete namespace argocd --ignore-not-found 2>/dev/null || true
-          kubectl delete namespace ingress-nginx --ignore-not-found 2>/dev/null || true
-          echo "✅ Namespaces deleted"
+          echo "⏳ Cleaning up orphaned AWS resources..."
+
+          # Release unassociated Elastic IPs
+          UNASSOC_IPS=$(aws ec2 describe-addresses --region us-west-2 --query 'Addresses[?AssociationId==null].AllocationId' --output text 2>/dev/null || true)
+          if [ -n "$UNASSOC_IPS" ]; then
+            echo "Releasing Elastic IPs: $UNASSOC_IPS"
+            for ip in $UNASSOC_IPS; do
+              aws ec2 release-address --allocation-id "$ip" --region us-west-2 2>/dev/null || true
+            done
+          fi
+
+          # Delete orphaned ENIs
+          ORPHAN_ENIS=$(aws ec2 describe-network-interfaces --region us-west-2 --query 'NetworkInterfaces[?Status==`available`].NetworkInterfaceId' --output text 2>/dev/null || true)
+          if [ -n "$ORPHAN_ENIS" ]; then
+            echo "Deleting orphaned ENIs: $ORPHAN_ENIS"
+            for eni in $ORPHAN_ENIS; do
+              aws ec2 delete-network-interface --network-interface-id "$eni" --region us-west-2 2>/dev/null || true
+            done
+          fi
+
+          echo "✅ AWS resources cleaned"
 
       - name: Terraform Destroy (DR)
         working-directory: terraform/environments/dr
