@@ -89,16 +89,25 @@ jobs:
         run: |
           echo "⏳ Cleaning up Kubernetes resources..."
 
+          # Force delete LoadBalancer services (remove finalizers)
+          echo "Force deleting LoadBalancer services..."
+          kubectl delete svc --all -n ingress-nginx --ignore-not-found 2>/dev/null || true
+          kubectl delete svc --all -n argocd --ignore-not-found 2>/dev/null || true
+          kubectl delete svc --all -n monitoring --ignore-not-found 2>/dev/null || true
+
+          # Wait for ALBs/NLBs to be deleted by AWS
+          sleep 20
+
           # Delete namespaces (will cascade delete everything inside)
           echo "Deleting namespaces..."
-          kubectl delete namespace solidarytech --ignore-not-found --wait=true 2>/dev/null || true
-          kubectl delete namespace monitoring --ignore-not-found --wait=true 2>/dev/null || true
-          kubectl delete namespace argocd --ignore-not-found --wait=true 2>/dev/null || true
-          kubectl delete namespace ingress-nginx --ignore-not-found --wait=true 2>/dev/null || true
+          kubectl delete namespace solidarytech --ignore-not-found --force --grace-period=0 2>/dev/null || true
+          kubectl delete namespace monitoring --ignore-not-found --force --grace-period=0 2>/dev/null || true
+          kubectl delete namespace argocd --ignore-not-found --force --grace-period=0 2>/dev/null || true
+          kubectl delete namespace ingress-nginx --ignore-not-found --force --grace-period=0 2>/dev/null || true
 
-          # Wait for LoadBalancers to be deleted (they release ENIs and Elastic IPs)
-          echo "Waiting for LoadBalancers to be released..."
-          sleep 45
+          # Wait for resources to fully cleanup
+          echo "Waiting for resource cleanup..."
+          sleep 30
 
           echo "✅ Kubernetes resources cleaned"
 
@@ -106,22 +115,48 @@ jobs:
         run: |
           echo "⏳ Cleaning up orphaned AWS resources..."
 
+          # Delete orphaned ALBs/NLBs
+          echo "Deleting orphaned Load Balancers..."
+          LOAD_BALANCERS=$(aws elbv2 describe-load-balancers --region us-east-1 --query 'LoadBalancers[].LoadBalancerArn' --output text 2>/dev/null || true)
+          if [ -n "$LOAD_BALANCERS" ]; then
+            for lb_arn in $LOAD_BALANCERS; do
+              echo "Deleting: $lb_arn"
+              aws elbv2 delete-load-balancer --load-balancer-arn "$lb_arn" --region us-east-1 2>/dev/null || true
+            done
+            echo "Waiting for ALBs to be deleted..."
+            sleep 20
+          fi
+
           # Release unassociated Elastic IPs
+          echo "Releasing unassociated Elastic IPs..."
           UNASSOC_IPS=$(aws ec2 describe-addresses --region us-east-1 --query 'Addresses[?AssociationId==null].AllocationId' --output text 2>/dev/null || true)
           if [ -n "$UNASSOC_IPS" ]; then
-            echo "Releasing Elastic IPs: $UNASSOC_IPS"
             for ip in $UNASSOC_IPS; do
               aws ec2 release-address --allocation-id "$ip" --region us-east-1 2>/dev/null || true
             done
           fi
 
           # Delete orphaned ENIs
+          echo "Deleting orphaned ENIs..."
           ORPHAN_ENIS=$(aws ec2 describe-network-interfaces --region us-east-1 --query 'NetworkInterfaces[?Status==`available`].NetworkInterfaceId' --output text 2>/dev/null || true)
           if [ -n "$ORPHAN_ENIS" ]; then
-            echo "Deleting orphaned ENIs: $ORPHAN_ENIS"
             for eni in $ORPHAN_ENIS; do
               aws ec2 delete-network-interface --network-interface-id "$eni" --region us-east-1 2>/dev/null || true
             done
+            sleep 10
+          fi
+
+          # Delete orphaned Security Groups (except default)
+          echo "Deleting orphaned Security Groups..."
+          VPC_ID=$(aws ec2 describe-vpcs --region us-east-1 --filters "Name=tag:Name,Values=*solidarytech*" --query 'Vpcs[0].VpcId' --output text 2>/dev/null || true)
+          if [ -n "$VPC_ID" ] && [ "$VPC_ID" != "None" ]; then
+            SG_IDS=$(aws ec2 describe-security-groups --region us-east-1 --filters "Name=vpc-id,Values=$VPC_ID" --query 'SecurityGroups[?GroupName!=`default`].GroupId' --output text 2>/dev/null || true)
+            if [ -n "$SG_IDS" ]; then
+              for sg in $SG_IDS; do
+                echo "Deleting SG: $sg"
+                aws ec2 delete-security-group --group-id "$sg" --region us-east-1 2>/dev/null || true
+              done
+            fi
           fi
 
           echo "✅ AWS resources cleaned"
@@ -180,16 +215,25 @@ jobs:
         run: |
           echo "⏳ Cleaning up Kubernetes resources..."
 
+          # Force delete LoadBalancer services (remove finalizers)
+          echo "Force deleting LoadBalancer services..."
+          kubectl delete svc --all -n ingress-nginx --ignore-not-found 2>/dev/null || true
+          kubectl delete svc --all -n argocd --ignore-not-found 2>/dev/null || true
+          kubectl delete svc --all -n monitoring --ignore-not-found 2>/dev/null || true
+
+          # Wait for ALBs/NLBs to be deleted by AWS
+          sleep 20
+
           # Delete namespaces (will cascade delete everything inside)
           echo "Deleting namespaces..."
-          kubectl delete namespace solidarytech --ignore-not-found --wait=true 2>/dev/null || true
-          kubectl delete namespace monitoring --ignore-not-found --wait=true 2>/dev/null || true
-          kubectl delete namespace argocd --ignore-not-found --wait=true 2>/dev/null || true
-          kubectl delete namespace ingress-nginx --ignore-not-found --wait=true 2>/dev/null || true
+          kubectl delete namespace solidarytech --ignore-not-found --force --grace-period=0 2>/dev/null || true
+          kubectl delete namespace monitoring --ignore-not-found --force --grace-period=0 2>/dev/null || true
+          kubectl delete namespace argocd --ignore-not-found --force --grace-period=0 2>/dev/null || true
+          kubectl delete namespace ingress-nginx --ignore-not-found --force --grace-period=0 2>/dev/null || true
 
-          # Wait for LoadBalancers to be deleted (they release ENIs and Elastic IPs)
-          echo "Waiting for LoadBalancers to be released..."
-          sleep 45
+          # Wait for resources to fully cleanup
+          echo "Waiting for resource cleanup..."
+          sleep 30
 
           echo "✅ Kubernetes resources cleaned"
 
@@ -197,22 +241,48 @@ jobs:
         run: |
           echo "⏳ Cleaning up orphaned AWS resources..."
 
+          # Delete orphaned ALBs/NLBs
+          echo "Deleting orphaned Load Balancers..."
+          LOAD_BALANCERS=$(aws elbv2 describe-load-balancers --region us-west-2 --query 'LoadBalancers[].LoadBalancerArn' --output text 2>/dev/null || true)
+          if [ -n "$LOAD_BALANCERS" ]; then
+            for lb_arn in $LOAD_BALANCERS; do
+              echo "Deleting: $lb_arn"
+              aws elbv2 delete-load-balancer --load-balancer-arn "$lb_arn" --region us-west-2 2>/dev/null || true
+            done
+            echo "Waiting for ALBs to be deleted..."
+            sleep 20
+          fi
+
           # Release unassociated Elastic IPs
+          echo "Releasing unassociated Elastic IPs..."
           UNASSOC_IPS=$(aws ec2 describe-addresses --region us-west-2 --query 'Addresses[?AssociationId==null].AllocationId' --output text 2>/dev/null || true)
           if [ -n "$UNASSOC_IPS" ]; then
-            echo "Releasing Elastic IPs: $UNASSOC_IPS"
             for ip in $UNASSOC_IPS; do
               aws ec2 release-address --allocation-id "$ip" --region us-west-2 2>/dev/null || true
             done
           fi
 
           # Delete orphaned ENIs
+          echo "Deleting orphaned ENIs..."
           ORPHAN_ENIS=$(aws ec2 describe-network-interfaces --region us-west-2 --query 'NetworkInterfaces[?Status==`available`].NetworkInterfaceId' --output text 2>/dev/null || true)
           if [ -n "$ORPHAN_ENIS" ]; then
-            echo "Deleting orphaned ENIs: $ORPHAN_ENIS"
             for eni in $ORPHAN_ENIS; do
               aws ec2 delete-network-interface --network-interface-id "$eni" --region us-west-2 2>/dev/null || true
             done
+            sleep 10
+          fi
+
+          # Delete orphaned Security Groups (except default)
+          echo "Deleting orphaned Security Groups..."
+          VPC_ID=$(aws ec2 describe-vpcs --region us-west-2 --filters "Name=tag:Name,Values=*solidarytech*" --query 'Vpcs[0].VpcId' --output text 2>/dev/null || true)
+          if [ -n "$VPC_ID" ] && [ "$VPC_ID" != "None" ]; then
+            SG_IDS=$(aws ec2 describe-security-groups --region us-west-2 --filters "Name=vpc-id,Values=$VPC_ID" --query 'SecurityGroups[?GroupName!=`default`].GroupId' --output text 2>/dev/null || true)
+            if [ -n "$SG_IDS" ]; then
+              for sg in $SG_IDS; do
+                echo "Deleting SG: $sg"
+                aws ec2 delete-security-group --group-id "$sg" --region us-west-2 2>/dev/null || true
+              done
+            fi
           fi
 
           echo "✅ AWS resources cleaned"
