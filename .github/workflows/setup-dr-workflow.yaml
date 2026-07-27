@@ -284,8 +284,10 @@ jobs:
         run: |
           echo "## 🎉 DR Deployment Complete"
           ARGOCD_LB=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
+          GRAFANA_LB=$(kubectl get svc prometheus-grafana -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
           INGRESS_LB=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
-          echo "- **ArgoCD (DR)**: https://$ARGOCD_LB"
+          echo "- **ArgoCD (DR)**: https://$ARGOCD_LB (user: admin)"
+          echo "- **Grafana (DR)**: http://$GRAFANA_LB (user: admin)"
           echo "- **Ingress (DR)**: http://$INGRESS_LB"
           echo "- **Cluster**: $CLUSTER_NAME ($REGION)"
           echo ""
