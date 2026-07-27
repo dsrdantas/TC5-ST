@@ -2,18 +2,130 @@
 
 Bem-vindo ao repositório oficial da **SolidaryTech**.
 
-Este monorepo contém os microsserviços que compõem a plataforma da ONG e servirá como base para os desafios do Hackathon Fase 5.
+Este monorepo contém os microsserviços que compõem a plataforma da ONG e a infraestrutura completa para deploy em AWS EKS com observabilidade, CI/CD, e Disaster Recovery.
 
-O objetivo principal deste projeto é aplicar conceitos modernos de:
+## ✅ Status
 
-- SRE (Site Reliability Engineering)
-- FinOps
-- Multicloud
-- ITSM
-- Observabilidade
-- Resiliência
-- Kubernetes & GitOps
-- Infraestrutura como Código (IaC)
+- ✅ **Terraform IaC**: 5 módulos (networking, eks, databases, messaging, ecr)
+- ✅ **Primary Environment** (us-east-1): EKS cluster, RDS PostgreSQL, DynamoDB, SQS
+- ✅ **DR Environment** (us-west-2): EKS cluster, RDS read-replica, ECR, SQS
+- ✅ **CI/CD Workflows**: Setup, Deploy, DR Drill, Destroy
+- ✅ **Observability**: Prometheus, Grafana, Loki, OpenTelemetry, New Relic APM
+- ✅ **GitOps**: ArgoCD, NGINX Ingress, automated deployments
+- ✅ **FinOps Tags**: Project, Environment, CostCenter em todos os recursos
+
+## 🎯 Conceitos Implementados
+
+- **SRE**: SLOs, Error Budgets, Alertas inteligentes, DR planning
+- **FinOps**: Tags estruturadas, cost tracking, FinOps compliance
+- **Observability**: Traces (OTEL → New Relic), Metrics (Prometheus), Logs (Loki)
+- **Resiliência**: Multi-AZ primary, cross-region DR, health checks, auto-healing
+- **Kubernetes & GitOps**: ArgoCD para sync automático, NGINX para ingress
+- **IaC**: Terraform 100% versionado, state remoto em S3
+
+---
+
+# 🚀 Deploy Automático via GitHub Actions
+
+## Workflows Disponíveis
+
+### 1. **Setup Full Stack** (`setup-full-workflow.yaml`)
+Provisiona ambiente completo: Terraform + Kubernetes + Observability
+
+**Triggers:**
+- Manual: `workflow_dispatch` com `auto_approve` input
+- Automático: push em `deploy/main` branch
+
+**Etapas:**
+1. Pre-flight checks (Terraform fmt/validate, Docker)
+2. Build & push de imagens (ngo, donation, volunteer)
+3. Terraform plan/apply (primary, us-east-1)
+4. Gera & aplica Kubernetes secrets
+5. Instala ArgoCD, NGINX, Prometheus, Grafana, Loki, OTEL
+6. Deploy das aplicações via ArgoCD
+
+**Saída:**
+```
+- ArgoCD: https://<load-balancer>
+- Grafana: http://<load-balancer> (admin / random-password)
+- Ingress: http://<load-balancer>
+```
+
+### 2. **Setup DR** (`setup-dr-workflow.yaml`)
+Provisiona ambiente DR em us-west-2
+
+**Trigger:** Manual com `primary_donation_db_arn` input
+
+**O que faz:**
+- Cria VPC + EKS (1 node skeleton)
+- RDS read-replica (cross-region do primary)
+- ECR repositories
+- Instala monitoramento
+- Standby mode (pronto para failover)
+
+### 3. **DR Drill** (`dr-drill.yaml`)
+Teste mensal de recuperação
+
+**Modos:**
+- `dry_run=true` (padrão): `terraform plan` only
+- `dry_run=false`: provisionamento + cleanup
+- `perform_failover=true`: failover real (DESTRUTIVO)
+
+### 4. **Destroy Environment** (`destroy-environment.yaml`)
+Limpeza completa e segura
+
+**Opções:**
+- `environment=primary|dr|both`
+- Requer confirmação: digitar "DESTROY"
+
+**Cleanup sequence:**
+1. Delete Kubernetes namespaces
+2. Delete LoadBalancers (ALBs/NLBs)
+3. Release Elastic IPs
+4. Delete ENIs
+5. Delete Security Groups
+6. Terraform destroy
+
+---
+
+## 📋 Pré-requisitos para Deploy
+
+### GitHub Secrets Obrigatórios
+
+Configure em: **Settings** → **Secrets and variables** → **Actions**
+
+```
+AWS_ACCESS_KEY_ID              # AWS Academy IAM user
+AWS_SECRET_ACCESS_KEY          # AWS Academy IAM secret
+AWS_SESSION_TOKEN              # AWS Academy session token (4h)
+```
+
+### Variáveis de Ambiente Terraform
+
+Arquivo: `terraform/environments/primary/terraform.tfvars`
+
+```hcl
+# Criado manualmente ou via descoberta
+project_name        = "solidarytech"
+aws_region          = "us-east-1"
+kubernetes_version  = "1.31"         # aws eks describe-cluster-versions
+postgres_version    = "16.4"         # aws rds describe-db-engine-versions
+repository          = "dsrdantas/TC5-ST"
+db_username         = "solidary"
+db_password         = "SecurePass123!"  # NÃO commitar!
+lab_role_arn        = "arn:aws:iam::ACCOUNT:role/LabRole"
+node_desired_size   = 2
+azs                 = ["us-east-1a", "us-east-1b", "us-east-1c"]
+```
+
+### New Relic APM (Opcional)
+
+```bash
+# Criar secret com sua license key
+kubectl create secret generic newrelic-license-key \
+  --namespace monitoring \
+  --from-literal=license-key="YOUR_NEW_RELIC_LICENSE_KEY"
+```
 
 ---
 
@@ -256,25 +368,106 @@ O verdadeiro desafio está na engenharia, operação e resiliência da plataform
 
 ---
 
-# ☁️ Infraestrutura como Código (Terraform)
+# ☁️ Infraestrutura como Código — Terraform
 
-Provisionar:
+## Estrutura Modular (5 Módulos)
 
-- Amazon EKS
-- Amazon RDS
-- Amazon ElastiCache
-- Amazon SQS
-- Amazon DynamoDB
-- VPC, Subnets e Security Groups
+```
+terraform/
+├── modules/
+│   ├── networking/      # VPC, Subnets, Security Groups, NAT Gateway
+│   ├── eks/             # EKS cluster, node groups, OIDC provider
+│   ├── databases/       # RDS PostgreSQL, DynamoDB, KMS keys
+│   ├── messaging/       # SQS queues, DLQ
+│   └── ecr/             # ECR repositories
+│
+└── environments/
+    ├── primary/         # us-east-1 production
+    │   ├── main.tf      # Module calls + outputs
+    │   ├── variables.tf # Input variables + discovery commands
+    │   └── terraform.tfvars
+    │
+    └── dr/              # us-west-2 disaster recovery
+        ├── main.tf      # Skeleton cluster + read-replica
+        ├── variables.tf
+        └── terraform.tfvars
+```
 
-## 💰 FinOps
+## Recursos Provisionados
 
-Implementar:
+**Primary (us-east-1):**
+- ✅ VPC (10.0.0.0/16) + 3 subnets privadas + 1 pública
+- ✅ EKS cluster 1.31 (2-3 nodes, gp3 volumes, IMDSv2)
+- ✅ RDS PostgreSQL 16.4 (Multi-AZ, encrypted, backups)
+- ✅ DynamoDB Global Tables (cross-region replica)
+- ✅ SQS + DLQ para processamento async
+- ✅ ECR repositories (ngo, donation, volunteer)
+- ✅ NAT Gateway (HA, 1 per AZ)
+- ✅ Security Groups (EKS, RDS, VPC flow logs)
 
-- Tags estruturadas
-- Controle de custos
-- Rightsizing
-- Budgets e alertas financeiros
+**DR (us-west-2):**
+- ✅ VPC (10.1.0.0/16) + 3 subnets privadas + 1 pública
+- ✅ EKS skeleton (1 node, pronto para scale)
+- ✅ RDS read-replica cross-region (criptografia)
+- ✅ DynamoDB replicas
+- ✅ SQS separada
+- ✅ ECR repositórios locais
+
+## Variáveis Obrigatórias
+
+**Necessário descobrir via AWS CLI:**
+
+```bash
+# Kubernetes version disponível
+aws eks describe-cluster-versions --region us-east-1 \
+  --query 'clusterVersions[].version'
+
+# PostgreSQL versions disponível
+aws rds describe-db-engine-versions --engine postgres \
+  --region us-east-1 \
+  --query 'DBEngineVersions[].EngineVersion' | head -5
+```
+
+**FinOps Tags (automático):**
+- Project: SolidaryTech
+- Environment: Production/DR
+- CostCenter: NGO-Core
+- Aplicadas a: instances, volumes, RDS, DynamoDB, SQS
+
+## 💰 FinOps — Tags e Cost Control
+
+**Todos os recursos recebem tags obrigatórias:**
+
+```
+Project     = "SolidaryTech"
+Environment = "Production" | "DR"
+CostCenter  = "NGO-Core"
+```
+
+**Recursos taggados:**
+- ✅ EC2 instances (EKS nodes)
+- ✅ EBS volumes
+- ✅ RDS databases
+- ✅ DynamoDB tables
+- ✅ VPC, Subnets, Gateways
+- ✅ SQS queues
+- ✅ ECR repositories
+
+**Rastreamento de custos:**
+
+```bash
+# AWS Cost Explorer
+aws ce get-cost-and-usage \
+  --time-period Start=2026-07-01,End=2026-07-31 \
+  --granularity MONTHLY \
+  --metrics BlendedCost \
+  --group-by Type=TAG,Key=Project
+```
+
+**Estimado (AWS us-east-1 + us-west-2):**
+- Primary: EKS (~$200/mês) + RDS (~$100) + NAT (~$30)
+- DR: EKS skeleton (~$50) + RDS replica (~$50)
+- **Total**: ~$430/mês
 
 ---
 
@@ -295,39 +488,101 @@ Ferramentas sugeridas:
 
 ---
 
-# 📊 Observabilidade
+# 📊 Observabilidade — Stack Completo
 
-Instrumentar os serviços utilizando:
+## Componentes Instalados
 
-- OpenTelemetry
-- Distributed Tracing
-- Métricas
-- Logs estruturados
+| Componente | Tipo | URL/Acesso |
+|---|---|---|
+| **Prometheus** | Métricas | `http://prometheus-kube-prometheus-prometheus.monitoring:9090` |
+| **Grafana** | Dashboards | `http://<load-balancer>` (admin) |
+| **Loki** | Logs | `http://loki.monitoring:3100` |
+| **Promtail** | Log Shipper | DaemonSet em cada node |
+| **OpenTelemetry Collector** | OTEL Hub | gRPC:4317 / HTTP:4318 |
+| **New Relic** | APM | `https://one.newrelic.com` (optional) |
+| **ArgoCD** | GitOps | `https://<load-balancer>` |
 
-Ferramentas sugeridas:
+## Métricas Golden Signals
 
-- Grafana
-- Prometheus
-- Datadog
-- New Relic
+Dashboard: `Solidarytech Overview`
+
+- **Latency**: HTTP Latency P95 by Service
+- **Traffic**: HTTP Request Rate by Service
+- **Errors**: HTTP Error Rate (5xx) by Service
+- **Saturation**: CPU/Memory usage by Namespace
+
+## Alerting
+
+**Alertmanager** com integração:
+- Discord webhooks
+- PagerDuty (SLO burn)
+- Auto-healing via GitHub Actions (opcional)
+
+## Traces & APM
+
+**New Relic Integration:**
+1. Forneça license key (ou deixe desativado)
+2. OpenTelemetry exporta traces automaticamente
+3. Dashboard APM: performance, dependencies, errors
+
+**Local (sem New Relic):**
+- Traces são logadas no OTEL Collector
+- Veja em: `kubectl logs -n monitoring deployment/otel-collector-opentelemetry-collector`
 
 ---
 
 # 🛡️ SRE & Resiliência
 
-Definir:
+## 📊 SLOs & Error Budgets
 
-- SLIs
-- SLOs
-- Error Budgets
-- Estratégias de Disaster Recovery
-- Alertas inteligentes
-- Health Checks
-- Auto Healing
+**Donation Service (Hot Path):**
+- **SLO**: 99.5% availability
+- **Window**: Monthly (720h)
+- **Error budget**: 3.6h downtime/month
+- **Alert threshold**: SLO burn-rate 10x (5% in 1h)
 
-## 🔥 Foco Principal
+**Alertas automáticos:**
+```yaml
+- SLOFastBurn: 90% budget used in 5% of window
+- SLOSlowBurn: 100% budget used in full window
+- HighErrorRate5xx: >1% errors
+- DonationLatencyP95High: P95 > 500ms
+```
 
-O `donation-service` deve ser tratado como componente crítico da plataforma.
+## 🌍 Disaster Recovery Strategy
+
+**Architecture: Warm Standby (Skeleton)**
+
+| Aspecto | Primary (us-east-1) | DR (us-west-2) |
+|---|---|---|
+| **EKS Nodes** | 2-3 (production) | 1 (skeleton) |
+| **RDS** | Primary database | Read-replica |
+| **DynamoDB** | Global Tables (replica) | Global Tables (replica) |
+| **SQS** | Active queue | Separate (messages lost) |
+| **RPO** | Near-zero | 5 min (RDS) / variable (DynamoDB) |
+| **RTO** | N/A | 15-30 min (manual failover + scale) |
+
+**Failover Manual:**
+```bash
+# 1. Promote RDS read-replica
+aws rds promote-read-replica --db-instance-identifier solidarytech-donation-db-dr
+
+# 2. Scale EKS to 3 nodes
+aws eks update-nodegroup-config --cluster-name solidarytech-cluster-dr \
+  --nodegroup-name solidarytech-nodegroup-dr \
+  --scaling-config desiredSize=3
+
+# 3. Switch DNS (route53)
+# 4. Verify data sync
+```
+
+**DR Drill (mensal):**
+```bash
+# Teste ponta-a-ponta sem afetar production
+gh workflow run dr-drill.yaml -f dry_run=false
+```
+
+**Foco Principal:** `donation-service` → Hot Path → RTO < 30min, RPO < 5min
 
 ---
 
@@ -344,6 +599,126 @@ O `donation-service` deve ser tratado como componente crítico da plataforma.
 - Terraform
 - GitOps
 - OpenTelemetry
+
+---
+
+# 🔧 Troubleshooting
+
+## Workflows falhando
+
+**Erro: Module not installed**
+```bash
+# Solução: terraform init antes de validate
+terraform init -backend=false
+terraform validate
+```
+
+**Erro: ECR não existe**
+- Workflow deve rodar `terraform apply` ANTES de `build-images`
+- Verifique `needs: [terraform-apply]` no build-images job
+
+**Erro: Kubernetes secrets faltando**
+```bash
+# Regenerar
+./scripts/generate-secrets.sh
+./scripts/apply-secrets.sh
+```
+
+## Cleanup de recursos órfãos
+
+**LoadBalancers / ALBs**
+```bash
+aws elbv2 describe-load-balancers --region us-east-1
+aws elbv2 delete-load-balancer --load-balancer-arn <arn>
+```
+
+**Elastic IPs não associados**
+```bash
+aws ec2 describe-addresses --filters "Name=domain,Values=vpc" \
+  --query 'Addresses[?AssociationId==null]'
+aws ec2 release-address --allocation-id <id>
+```
+
+**Security Groups órfãos**
+```bash
+aws ec2 delete-security-group --group-id <id>
+```
+
+---
+
+# 📚 Referências
+
+## Documentação por Módulo
+
+- [terraform/modules/networking/README.md](terraform/modules/networking/README.md)
+- [terraform/modules/eks/README.md](terraform/modules/eks/README.md)
+- [terraform/modules/databases/README.md](terraform/modules/databases/README.md)
+- [terraform/modules/messaging/README.md](terraform/modules/messaging/README.md)
+- [terraform/modules/ecr/README.md](terraform/modules/ecr/README.md)
+- [terraform/environments/primary/README.md](terraform/environments/primary/README.md)
+- [terraform/environments/dr/README.md](terraform/environments/dr/README.md)
+
+## Arquivos de Configuração
+
+- [.github/workflows/](github/workflows/) — CI/CD pipelines
+- [gitops/](gitops/) — ArgoCD applications
+- [scripts/](scripts/) — Helper scripts
+- [docs/](docs/) — Documentation & diagrams
+
+## Ferramentas Recomendadas
+
+```bash
+# CLI tools
+brew install awscli kubectl helm terraform
+
+# Verify versions
+aws --version
+kubectl version --client
+helm version
+terraform version
+```
+
+---
+
+# 🚀 Quick Start
+
+**1. Setup local:**
+```bash
+# Clone
+git clone https://github.com/dsrdantas/TC5-ST.git
+cd TC5-ST
+
+# Configure credentials
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_SESSION_TOKEN=...
+
+# Check Terraform
+cd terraform/environments/primary
+terraform init -backend=false
+terraform validate
+```
+
+**2. Deploy via GitHub:**
+- Push para `deploy/main`
+- OU: Manual trigger: Actions → Setup Full Stack → Run workflow
+
+**3. Monitor:**
+```bash
+# Get load balancer URLs
+kubectl get svc -A
+
+# Check pods
+kubectl get pods -n solidarytech
+
+# View logs
+kubectl logs -n solidarytech deployment/donation-service
+```
+
+**4. Access UIs:**
+- ArgoCD: `https://<load-balancer>`
+- Grafana: `http://<load-balancer>`
+- Apps: `http://<ingress-load-balancer>`
 
 ---
 
