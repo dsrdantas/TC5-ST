@@ -74,12 +74,10 @@ config:
     otlphttp/loki:
       endpoint: "http://loki.monitoring.svc.cluster.local:3100/otlp"
 
-    # New Relic OTLP endpoint (descomente para ativar APM)
-    # Requer: kubectl apply -f gitops/monitoring/newrelic-secret.yaml
-    # otlphttp/newrelic:
-    #   endpoint: "https://otlp.nr-data.net"
-    #   headers:
-    #     api-key: "${NEW_RELIC_LICENSE_KEY}"
+    otlphttp/newrelic:
+      endpoint: "https://otlp.nr-data.net"
+      headers:
+        api-key: "${NEW_RELIC_LICENSE_KEY}"
 
     debug:
       verbosity: basic
@@ -106,11 +104,10 @@ config:
         processors: [memory_limiter, resource, batch]
         exporters: [otlphttp/loki, debug]
 
-# Descomente para habilitar APM no New Relic:
-# extraEnvs:
-#   - name: NEW_RELIC_LICENSE_KEY
-#     valueFrom:
-#       secretKeyRef:
-#         name: newrelic-license-key
-#         key: license-key
-#         optional: true
+extraEnvs:
+  - name: NEW_RELIC_LICENSE_KEY
+    valueFrom:
+      secretKeyRef:
+        name: newrelic-license-key
+        key: license-key
+        optional: true
