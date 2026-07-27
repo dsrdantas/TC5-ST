@@ -276,8 +276,8 @@ jobs:
             -backend-config="dynamodb_table=${TABLE}" \
             -input=false -no-color > /dev/null
 
-          CLUSTER_NAME=$(terraform output -raw cluster_name 2>/dev/null)
-          REGION=$(terraform output -raw region 2>/dev/null)
+          CLUSTER_NAME=$(terraform output -raw cluster_name 2>&1 | grep -v '::' | head -1)
+          REGION=$(terraform output -raw region 2>&1 | grep -v '::' | head -1)
           echo "CLUSTER_NAME=$CLUSTER_NAME" >> "$GITHUB_ENV"
           echo "REGION=$REGION" >> "$GITHUB_ENV"
 
