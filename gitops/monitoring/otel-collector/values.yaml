@@ -74,12 +74,12 @@ config:
     otlphttp/loki:
       endpoint: "http://loki.monitoring.svc.cluster.local:3100/otlp"
 
-    # New Relic OTLP endpoint (us-east-1 datacenter padrao).
-    # license-key vem do secret newrelic-license-key (campo extraEnvs abaixo).
-    otlphttp/newrelic:
-      endpoint: "https://otlp.nr-data.net"
-      headers:
-        api-key: "${NEW_RELIC_LICENSE_KEY}"
+    # New Relic OTLP endpoint (descomente para ativar APM)
+    # Requer: kubectl apply -f gitops/monitoring/newrelic-secret.yaml
+    # otlphttp/newrelic:
+    #   endpoint: "https://otlp.nr-data.net"
+    #   headers:
+    #     api-key: "${NEW_RELIC_LICENSE_KEY}"
 
     debug:
       verbosity: basic
@@ -94,12 +94,12 @@ config:
       traces:
         receivers: [otlp]
         processors: [memory_limiter, resource, batch]
-        exporters: [otlphttp/newrelic, debug]
+        exporters: [debug]
 
       metrics:
         receivers: [otlp]
         processors: [memory_limiter, resource, batch]
-        exporters: [prometheusremotewrite, otlphttp/newrelic, debug]
+        exporters: [prometheusremotewrite, debug]
 
       logs:
         receivers: [otlp]
@@ -110,10 +110,11 @@ config:
       metrics:
         address: 0.0.0.0:8888
 
-extraEnvs:
-  - name: NEW_RELIC_LICENSE_KEY
-    valueFrom:
-      secretKeyRef:
-        name: newrelic-license-key
-        key: license-key
-        optional: true
+# Descomente para habilitar APM no New Relic:
+# extraEnvs:
+#   - name: NEW_RELIC_LICENSE_KEY
+#     valueFrom:
+#       secretKeyRef:
+#         name: newrelic-license-key
+#         key: license-key
+#         optional: true
