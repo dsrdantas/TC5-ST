@@ -76,6 +76,7 @@ spec:
           labels:
             severity: critical
             team: solidarytech
+            service: "{{ $labels.service_name }}"
           annotations:
             summary: "Alta taxa de 5xx em {{ $labels.service_name }}"
             description: "Servico {{ $labels.service_name }} com 5xx > 5% nos ultimos 2min. Atual: {{ $value | humanizePercentage }}"
@@ -92,6 +93,7 @@ spec:
           labels:
             severity: critical
             team: solidarytech
+            pod: "{{ $labels.pod }}"
           annotations:
             summary: "Pod em crash loop: {{ $labels.namespace }}/{{ $labels.pod }}"
             description: "Container {{ $labels.container }} reiniciou {{ $value }}x nos ultimos 15min"

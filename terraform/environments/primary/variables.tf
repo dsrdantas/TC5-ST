@@ -48,6 +48,11 @@ variable "repository" {
   type        = string
 }
 
+variable "github_user" {
+  description = "Usuario GitHub (para substituir placeholder <GITHUB_USER> em manifestos GitOps e self-healing-bridge)."
+  type        = string
+}
+
 variable "node_desired_size" {
   # Decisao herdada da FASE 4: 3 nodes minimo. Justificativa: t3.medium tem
   # limite de ~17 pods/node via AWS VPC CNI (n_ENIs do tipo de instancia).

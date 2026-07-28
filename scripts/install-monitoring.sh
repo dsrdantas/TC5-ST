@@ -109,6 +109,25 @@ if [ -f "$MONITORING_DIR/alerting/alertmanager-config.yaml" ]; then
 fi
 
 # -------------------------------------------------------
+# Aplicar Self-Healing Bridge (auto-remediation via webhook)
+# -------------------------------------------------------
+BRIDGE_FILE="$MONITORING_DIR/self-healing-bridge/deployment.yaml"
+if [ -f "$BRIDGE_FILE" ]; then
+    log_info "Aplicando Self-Healing Bridge..."
+    # Substituir placeholder <GITHUB_USER> pelo git user (origin remote)
+    GITHUB_USER=$(git config --get remote.origin.url | sed -E 's|.*github.com[:/]([^/]+)/.*|\1|')
+    if [ -z "$GITHUB_USER" ]; then
+        log_warn "NAO foi possivel extrair GITHUB_USER do git remote. Use:"
+        log_warn "  kubectl apply -f $BRIDGE_FILE (e edite <GITHUB_USER> manualmente)"
+    else
+        sed "s|<GITHUB_USER>|${GITHUB_USER}|g" "$BRIDGE_FILE" | kubectl apply -f -
+        log_ok "Self-Healing Bridge aplicado (repo: ${GITHUB_USER}/TC5-ST)"
+    fi
+else
+    log_warn "Self-Healing Bridge NAO encontrado em $BRIDGE_FILE"
+fi
+
+# -------------------------------------------------------
 # Aplicar PrometheusRules customizadas (SLO + Hot Path)
 # -------------------------------------------------------
 if [ -f "$MONITORING_DIR/alerting/prometheus-rules.yaml" ]; then

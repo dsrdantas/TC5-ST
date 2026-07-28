@@ -360,6 +360,31 @@ jobs:
           kubectl rollout status deployment/volunteer-service -n solidarytech --timeout=180s || true
           echo "✅ Applications deployed"
 
+      - name: Setup Self-Healing Bridge Secret
+        env:
+          PAT_TOKEN_SELF_HEALING: ${{ secrets.PAT_TOKEN_SELF_HEALING }}
+        run: |
+          if [ -z "$PAT_TOKEN_SELF_HEALING" ]; then
+            echo "⚠️  PAT_TOKEN_SELF_HEALING secret not configured"
+            echo "   Set it in: Settings → Secrets and variables → Actions → New repository secret"
+            echo "   Name: PAT_TOKEN_SELF_HEALING"
+            echo "   Value: your fine-grained PAT (ghp_...)"
+            echo ""
+            echo "   ⚠️  NOTA: Não pode começar com GITHUB_ (reservado pelo GitHub Actions)"
+            exit 1
+          fi
+          chmod +x scripts/setup-self-healing-secret.sh
+          ./scripts/setup-self-healing-secret.sh
+
+      - name: Deploy Self-Healing Bridge (with GITHUB_USER substitution)
+        env:
+          GITHUB_USER: ${{ github.repository_owner }}
+        run: |
+          sed "s|<GITHUB_USER>|${GITHUB_USER}|g" gitops/monitoring/self-healing-bridge/deployment.yaml | kubectl apply -f -
+          echo "⏳ Waiting for self-healing-bridge to be ready..."
+          kubectl rollout status deployment/self-healing-bridge -n monitoring --timeout=60s || true
+          echo "✅ Self-Healing Bridge deployed"
+
       - name: Install Monitoring Stack
         run: ./scripts/install-monitoring.sh
 

@@ -82,8 +82,8 @@ stringData:
               {{ end }}
 
       # ----------------------------------------------------------------
-      # Critical: PagerDuty (ITSM) + Discord (visibilidade) + GitHub
-      #           Actions (self-healing via webhook-receiver → workflow_dispatch)
+      # Critical: PagerDuty (ITSM) + Discord (visibilidade) + Self-Healing
+      #           (self-healing-bridge traduz webhook → repository_dispatch)
       # ----------------------------------------------------------------
       - name: 'solidarytech-critical'
         pagerduty_configs:
@@ -105,10 +105,10 @@ stringData:
               *Summary:* {{ .Annotations.summary }}
               *Description:* {{ .Annotations.description }}
               {{ end }}
-        # Self-Healing via webhook bridge (webhook-receiver)
-        # Dispara workflow_dispatch do GitHub Actions via API com GitHub PAT
+        # Self-Healing: webhook bridge traduz para GitHub repository_dispatch
+        # → self-healing.yaml workflow → kubectl rollout restart
         webhook_configs:
-          - url: 'http://webhook-receiver.monitoring.svc.cluster.local:8080/webhook'
+          - url: 'http://self-healing-bridge.monitoring.svc.cluster.local:9095/'
             send_resolved: false
 
       # ----------------------------------------------------------------
