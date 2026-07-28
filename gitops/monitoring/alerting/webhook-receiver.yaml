@@ -6,71 +6,102 @@ metadata:
   name: webhook-receiver-script
   namespace: monitoring
 data:
-  receiver.sh: |
-    #!/bin/bash
-    # Webhook receiver para disparar self-healing via GitHub Actions
-    # Recebe JSON do Alertmanager, extrai dados, dispara workflow via API
+  receiver.py: |
+    #!/usr/bin/env python3
+    import json
+    import sys
+    import os
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    import subprocess
+    from urllib.parse import urlparse
 
-    set -e
+    GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
+    GITHUB_REPO = os.getenv('GITHUB_REPO', 'dsrdantas/TC5-ST')
+    GITHUB_WORKFLOW = 'self-healing.yaml'
 
-    GITHUB_TOKEN="${GITHUB_TOKEN}"
-    GITHUB_REPO="${GITHUB_REPO}"  # dsrdantas/TC5-ST
-    GITHUB_WORKFLOW="self-healing.yaml"
+    class WebhookHandler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            if self.path != '/webhook':
+                self.send_response(404)
+                self.end_headers()
+                self.wfile.write(b'Not Found')
+                return
 
-    # Validar env vars
-    if [ -z "$GITHUB_TOKEN" ] || [ -z "$GITHUB_REPO" ]; then
-      echo "ERROR: GITHUB_TOKEN e GITHUB_REPO sao obrigatorios"
-      exit 1
-    fi
+            # Ler payload
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
 
-    # Ler JSON do stdin (enviado por Alertmanager)
-    read -r json_payload
+            try:
+                payload = json.loads(body)
+                self.process_alert(payload)
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'OK')
+            except Exception as e:
+                print(f"Error: {e}", file=sys.stderr)
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'Internal Server Error')
 
-    # Parse do JSON (extrai primeiro alerta)
-    alertname=$(echo "$json_payload" | jq -r '.alerts[0].labels.alertname // "unknown"')
-    severity=$(echo "$json_payload" | jq -r '.alerts[0].labels.severity // "warning"')
-    service=$(echo "$json_payload" | jq -r '.alerts[0].labels.service // "donation-service"')
-    description=$(echo "$json_payload" | jq -r '.alerts[0].annotations.description // "Auto-triggered by Alertmanager webhook"')
+        def process_alert(self, payload):
+            if not payload.get('alerts'):
+                print("No alerts in payload")
+                return
 
-    echo "[$(date)] Webhook recebido: alert=$alertname severity=$severity service=$service"
+            alert = payload['alerts'][0]
+            alertname = alert.get('labels', {}).get('alertname', 'unknown')
+            severity = alert.get('labels', {}).get('severity', 'warning')
+            service = alert.get('labels', {}).get('service', 'donation-service')
+            description = alert.get('annotations', {}).get('description', 'Auto-triggered by Alertmanager')
 
-    # Decidir se dispara self-healing (só para alertas CRÍTICOS de crash/error-rate)
-    should_heal=false
-    case "$alertname" in
-      PodCrashLooping|HighErrorRate5xx|DonationSLOFastBurn)
-        should_heal=true
-        ;;
-      *)
-        echo "⚠️  Alert $alertname nao dispara self-healing (manual only)"
-        exit 0
-        ;;
-    esac
+            print(f"[Webhook] Alert: {alertname} | Severity: {severity} | Service: {service}")
 
-    if [ "$should_heal" = "true" ]; then
-      echo "✅ Disparando self-healing para $service..."
+            # Decidir se dispara self-healing
+            should_heal = alertname in ['PodCrashLooping', 'HighErrorRate5xx', 'DonationSLOFastBurn']
 
-      # Chamar GitHub Actions API para disparar workflow_dispatch
-      curl -sS -X POST \
-        -H "Authorization: token $GITHUB_TOKEN" \
-        -H "Accept: application/vnd.github.v3+json" \
-        "https://api.github.com/repos/$GITHUB_REPO/actions/workflows/$GITHUB_WORKFLOW/dispatches" \
-        -d @- <<EOF
-    {
-      "ref": "main",
-      "inputs": {
-        "service": "$service",
-        "reason": "Auto-heal via Alertmanager: $alertname ($severity) — $description"
-      }
-    }
-    EOF
+            if should_heal:
+                print(f"✅ Disparando self-healing para {service}...")
+                self.trigger_workflow(service, alertname, severity, description)
+            else:
+                print(f"⚠️  Alert {alertname} não dispara self-healing")
 
-      if [ $? -eq 0 ]; then
-        echo "✅ Workflow_dispatch enviado com sucesso"
-      else
-        echo "❌ Erro ao disparar workflow"
-        exit 1
-      fi
-    fi
+        def trigger_workflow(self, service, alertname, severity, description):
+            if not GITHUB_TOKEN:
+                print("ERROR: GITHUB_TOKEN não configurado")
+                return
+
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/{GITHUB_WORKFLOW}/dispatches"
+            payload_json = json.dumps({
+                "ref": "main",
+                "inputs": {
+                    "service": service,
+                    "reason": f"Auto-heal via Alertmanager: {alertname} ({severity}) — {description}"
+                }
+            })
+
+            cmd = [
+                'curl', '-sS', '-X', 'POST',
+                '-H', f'Authorization: token {GITHUB_TOKEN}',
+                '-H', 'Accept: application/vnd.github.v3+json',
+                '-H', 'Content-Type: application/json',
+                '-d', payload_json,
+                url
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                print("✅ Workflow_dispatch enviado com sucesso")
+            else:
+                print(f"❌ Erro ao disparar workflow: {result.stderr}")
+
+        def log_message(self, format, *args):
+            # Suppress default logging
+            pass
+
+    if __name__ == '__main__':
+        server = HTTPServer(('0.0.0.0', 8080), WebhookHandler)
+        print("Webhook receiver listening on port 8080...")
+        server.serve_forever()
 
 ---
 apiVersion: v1
@@ -102,31 +133,10 @@ spec:
       serviceAccountName: webhook-receiver
       containers:
         - name: receiver
-          image: curlimages/curl:latest
-          # Rodando nc (netcat) para simples HTTP server (Busybox minimal)
+          image: python:3.11-alpine
           command:
-            - sh
-            - -c
-            - |
-              apk add --no-cache bash jq
-              while true; do
-                {
-                  read -r method path protocol
-                  while read -r header; do
-                    [ -z "$header" ] && break
-                  done
-
-                  if [ "$method" = "POST" ] && [ "$path" = "/webhook" ]; then
-                    read -r body
-                    export GITHUB_TOKEN="$GITHUB_TOKEN"
-                    export GITHUB_REPO="$GITHUB_REPO"
-                    echo "$body" | bash /scripts/receiver.sh
-                    echo -ne "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK"
-                  else
-                    echo -ne "HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\n\r\nNot Found"
-                  fi
-                } | nc -l -p 8080 -w 1
-              done
+            - python3
+            - /scripts/receiver.py
           ports:
             - name: http
               containerPort: 8080
@@ -137,15 +147,28 @@ spec:
                 secretKeyRef:
                   name: github-webhook-token
                   key: token
+                  optional: true
             - name: GITHUB_REPO
               value: "dsrdantas/TC5-ST"
           resources:
             requests:
               cpu: 50m
-              memory: 64Mi
+              memory: 128Mi
             limits:
               cpu: 100m
-              memory: 128Mi
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /webhook
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /webhook
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
           volumeMounts:
             - name: scripts
               mountPath: /scripts
