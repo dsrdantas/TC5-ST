@@ -92,12 +92,12 @@ config:
       traces:
         receivers: [otlp]
         processors: [memory_limiter, resource, batch]
-        exporters: [debug]
+        exporters: [otlphttp/newrelic, debug]
 
       metrics:
         receivers: [otlp]
         processors: [memory_limiter, resource, batch]
-        exporters: [prometheusremotewrite, debug]
+        exporters: [otlphttp/newrelic, prometheusremotewrite, debug]
 
       logs:
         receivers: [otlp]
