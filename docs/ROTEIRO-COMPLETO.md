@@ -124,7 +124,7 @@ Se usar 2 nós o cluster fica em **Pending** com `FailedScheduling: Too many pod
 
 ## 4. GitHub Secrets do fork
 
-No **seu fork** (`https://github.com/<SEU_USER>/TC5-SolidaryTech`), abrir
+No **seu fork** (`https://github.com/<SEU_USER>/TC5-ST`), abrir
 **Settings → Secrets and variables → Actions** e cadastrar:
 
 | Secret | Valor | Usado por |

@@ -4,6 +4,23 @@ Bem-vindo ao repositório oficial da **SolidaryTech**.
 
 Este monorepo contém os microsserviços que compõem a plataforma da ONG e a infraestrutura completa para deploy em AWS EKS com observabilidade, CI/CD, e Disaster Recovery.
 
+---
+
+## 👥 Equipe
+
+| Nome | RM | Username Discord |
+|------|----|----|
+| Daniel da Silva Rodrigues Dantas | RM367539 | pl0c_ |
+| Thiago Viegas | RM367590 | oviegas_60314 |
+
+## 🎥 Recursos Principais
+
+- **📽️ [Assistir Apresentação do Pitch](https://github.com/dsrdantas/TC5-ST/blob/main/docs/tc5-st.mp4)**
+- **📖 [Ver Documentação Completa](docs/RELATORIO-ENTREGA-FINAL.md)**
+- **🎯 [Visualizar Slides Interativos](docs/pitch-slides.html)**
+
+---
+
 ## ✅ Status
 
 - ✅ **Terraform IaC**: 5 módulos (networking, eks, databases, messaging, ecr)

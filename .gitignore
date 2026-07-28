@@ -46,3 +46,4 @@ docker-compose.override.yml
 # Logs
 *.log
 /tmp/
+docs/tc5-st.mp4

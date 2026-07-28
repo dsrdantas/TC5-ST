@@ -192,7 +192,7 @@ Self-healing workflow disparado no Sprint 5.5 — restart completo do `donation-
 - **Tempo total:** 43 segundos
 - **Pods reiniciados:** 3/3
 - **Discord notificações:** "INICIADO" + "CONCLUIDO"
-- **Run ID:** [#26662680566](https://github.com/rivachef/TC5-SolidaryTech/actions/runs/26662680566)
+- **Run ID:** [#26662680566](https://github.com/dsrdantas/TC5-ST/actions/runs/26662680566)
 
 > **Sem self-healing**, o mesmo procedimento manual (SRE recebe page → loga no console → roda `kubectl rollout restart` → valida) levaria ~5-10min.
 > **Redução de MTTR: 80%+** no cenário "pod crashloop em horário comercial".

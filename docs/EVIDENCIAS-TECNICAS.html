@@ -1,0 +1,823 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolidaryTech - Evidências Técnicas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            color: #1F2937;
+            line-height: 1.6;
+            background: white;
+        }
+
+        .page-break {
+            page-break-after: always;
+            break-after: always;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        /* CAPA */
+        .cover {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #2563EB 0%, #1e40af 100%);
+            color: white;
+            padding: 60px 40px;
+        }
+
+        .cover h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .cover h2 {
+            font-size: 28px;
+            margin-bottom: 60px;
+            font-weight: normal;
+        }
+
+        .cover .links {
+            margin-top: 80px;
+            text-align: center;
+            font-size: 16px;
+            line-height: 2;
+        }
+
+        .cover .link-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+        }
+
+        .cover .team {
+            margin-top: 100px;
+            font-size: 14px;
+        }
+
+        /* SEÇÕES */
+        .section {
+            page-break-before: always;
+            padding: 40px 0;
+            border-top: 3px solid #2563EB;
+            padding-top: 40px;
+        }
+
+        .section h1 {
+            font-size: 36px;
+            color: #2563EB;
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            font-size: 24px;
+            color: #1e40af;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .section h3 {
+            font-size: 18px;
+            color: #374151;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .section p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+
+        table th {
+            background: #2563EB;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        table td {
+            border: 1px solid #E5E7EB;
+            padding: 12px;
+        }
+
+        table tr:nth-child(even) {
+            background: #F9FAFB;
+        }
+
+        .code-block {
+            background: #F3F4F6;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .metric-box {
+            background: #f0fdf4;
+            border: 2px solid #10B981;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .metric-box .number {
+            font-size: 32px;
+            color: #10B981;
+            font-weight: bold;
+        }
+
+        .metric-box .label {
+            font-size: 14px;
+            color: #1F2937;
+            margin-top: 10px;
+        }
+
+        .alert {
+            background: #fef2f2;
+            border: 2px solid #EF4444;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .highlight {
+            background: #fef08a;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .flow-diagram {
+            text-align: center;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            background: #F3F4F6;
+            padding: 20px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.8;
+            white-space: pre;
+        }
+
+        .date {
+            text-align: right;
+            font-size: 12px;
+            color: #6B7280;
+            margin-top: 40px;
+        }
+
+        @media print {
+            body { background: white; }
+            .page-break { page-break-after: always; }
+        }
+    </style>
+</head>
+<body>
+    <!-- CAPA -->
+    <div class="cover">
+        <h1>🚀 SOLIDARYTECH</h1>
+        <h2>Evidências Técnicas<br>Tech Challenge FASE 5</h2>
+
+        <div class="links">
+            <p><strong>📌 Repositório de Código:</strong></p>
+            <div class="link-item">
+                https://github.com/dsrdantas/TC5-ST
+            </div>
+
+            <p style="margin-top: 30px;"><strong>📽️ Vídeo de Apresentação:</strong></p>
+            <div class="link-item">
+                https://github.com/dsrdantas/TC5-ST/blob/main/docs/tc5-st.mp4
+            </div>
+        </div>
+
+        <div class="team">
+            <p><strong>👥 Equipe:</strong></p>
+            <p>Daniel da Silva Rodrigues Dantas (RM367539)<br>
+            Thiago Viegas (RM367590)</p>
+        </div>
+    </div>
+
+    <!-- SEÇÃO SRE -->
+    <div class="page-break"></div>
+    <div class="container">
+        <div class="section">
+            <h1>📊 SRE — Service Level Objectives</h1>
+
+            <h2>Definição Formal de SLI, SLO e SLA</h2>
+
+            <h3>Service Level Indicator (SLI)</h3>
+            <p>Métricas observáveis que indicam o desempenho real do serviço.</p>
+
+            <table>
+                <tr>
+                    <th>SLI</th>
+                    <th>Definição</th>
+                    <th>Métrica</th>
+                    <th>Objetivo</th>
+                </tr>
+                <tr>
+                    <td><strong>Availability</strong></td>
+                    <td>Taxa de requisições sem erro 5xx</td>
+                    <td>(1 - taxa_erros_5xx) × 100%</td>
+                    <td>≥ 99.9%</td>
+                </tr>
+                <tr>
+                    <td><strong>Latência P95</strong></td>
+                    <td>Percentil 95 da latência de resposta</td>
+                    <td>histogram_quantile(0.95, latency)</td>
+                    <td>&lt; 300ms</td>
+                </tr>
+                <tr>
+                    <td><strong>Taxa de Erro 5xx</strong></td>
+                    <td>Requisições com status 500-599</td>
+                    <td>rate(http_5xx_errors[5m])</td>
+                    <td>&lt; 0.1% por minuto</td>
+                </tr>
+            </table>
+
+            <h3>Service Level Objective (SLO)</h3>
+            <p>Objetivo de desempenho que queremos atingir internamente.</p>
+
+            <table>
+                <tr>
+                    <th>SLO</th>
+                    <th>Objetivo</th>
+                    <th>Error Budget/Mês</th>
+                    <th>Justificativa</th>
+                </tr>
+                <tr>
+                    <td><strong>Availability</strong></td>
+                    <td><span class="highlight">≥ 99.9%</span></td>
+                    <td>43 min 48s de downtime</td>
+                    <td>Padrão para sistemas de doação não-financeiros</td>
+                </tr>
+                <tr>
+                    <td><strong>Latência P95</strong></td>
+                    <td><span class="highlight">&lt; 300ms</span></td>
+                    <td>5% das requisições podem exceder</td>
+                    <td>Perceptível para UX de doação</td>
+                </tr>
+            </table>
+
+            <h3>Service Level Agreement (SLA)</h3>
+            <p>Compromisso contratual externo com ONGs parceiras.</p>
+
+            <div class="metric-box">
+                <div class="label">SLA com ONGs Parceiras</div>
+                <div class="number">99.5%</div>
+                <div class="label">Disponibilidade Contratada</div>
+            </div>
+
+            <p><strong>Margem de segurança:</strong> SLO (99.9%) vs SLA (99.5%) = 0.4% de buffer</p>
+
+            <h3>Burn Rate Alerts</h3>
+            <table>
+                <tr>
+                    <th>Alert</th>
+                    <th>Condição</th>
+                    <th>Limiar</th>
+                    <th>Ação</th>
+                </tr>
+                <tr>
+                    <td><strong>SLOFastBurn</strong></td>
+                    <td>Queima 14.4x o orçamento</td>
+                    <td>2+ horas para esgotar</td>
+                    <td>PagerDuty + Self-Heal</td>
+                </tr>
+                <tr>
+                    <td><strong>SLOSlowBurn</strong></td>
+                    <td>Queima 1x o orçamento</td>
+                    <td>6 horas para esgotar</td>
+                    <td>Escalação SRE</td>
+                </tr>
+            </table>
+
+            <div class="date">Data: 28 de Julho de 2026</div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO FINOPS -->
+    <div class="page-break"></div>
+    <div class="container">
+        <div class="section">
+            <h1>💰 FinOps — Financial Operations</h1>
+
+            <h2>Política de Tags (Obrigatório)</h2>
+            <p>Tags aplicadas em <strong>TODO</strong> recurso AWS via <code>default_tags</code> no Terraform.</p>
+
+            <table>
+                <tr>
+                    <th>Tag</th>
+                    <th>Valor</th>
+                    <th>Propósito</th>
+                </tr>
+                <tr>
+                    <td><strong>Project</strong></td>
+                    <td>SolidaryTech</td>
+                    <td>Identificar projeto</td>
+                </tr>
+                <tr>
+                    <td><strong>Environment</strong></td>
+                    <td>Production / DR</td>
+                    <td>Separar custos por ambiente</td>
+                </tr>
+                <tr>
+                    <td><strong>CostCenter</strong></td>
+                    <td>NGO-Core</td>
+                    <td>Alocação de custos</td>
+                </tr>
+                <tr>
+                    <td><strong>ManagedBy</strong></td>
+                    <td>Terraform</td>
+                    <td>Rastreabilidade de IaC</td>
+                </tr>
+            </table>
+
+            <h3>Cobertura de Recursos Taggueados</h3>
+            <table>
+                <tr>
+                    <th>Recurso AWS</th>
+                    <th>Tagueado</th>
+                    <th>Método</th>
+                </tr>
+                <tr>
+                    <td>EC2 instances (EKS nodes)</td>
+                    <td>✅</td>
+                    <td>launch_template + default_tags</td>
+                </tr>
+                <tr>
+                    <td>RDS instances</td>
+                    <td>✅</td>
+                    <td>default_tags</td>
+                </tr>
+                <tr>
+                    <td>DynamoDB tables</td>
+                    <td>✅</td>
+                    <td>default_tags</td>
+                </tr>
+                <tr>
+                    <td>SQS queues</td>
+                    <td>✅</td>
+                    <td>default_tags</td>
+                </tr>
+                <tr>
+                    <td>ECR repositories</td>
+                    <td>✅</td>
+                    <td>default_tags</td>
+                </tr>
+                <tr>
+                    <td>VPC + Subnets</td>
+                    <td>✅</td>
+                    <td>default_tags + Name específico</td>
+                </tr>
+            </table>
+
+            <h2>Forecast de Custos Mensais</h2>
+
+            <h3>Setup Atual (24/7, com DR)</h3>
+            <table>
+                <tr>
+                    <th>Componente</th>
+                    <th>Quantidade</th>
+                    <th>Custo/Mês</th>
+                    <th>% Total</th>
+                </tr>
+                <tr>
+                    <td><strong>EKS control plane</strong></td>
+                    <td>1 cluster</td>
+                    <td>$73.00</td>
+                    <td>33%</td>
+                </tr>
+                <tr>
+                    <td><strong>EC2 nodes</strong> (t3.medium)</td>
+                    <td>3</td>
+                    <td>$89.86</td>
+                    <td>41%</td>
+                </tr>
+                <tr>
+                    <td><strong>RDS PostgreSQL</strong></td>
+                    <td>2 instâncias</td>
+                    <td>$24.48</td>
+                    <td>11%</td>
+                </tr>
+                <tr>
+                    <td><strong>NAT Gateway</strong></td>
+                    <td>1</td>
+                    <td>$32.40</td>
+                    <td>15%</td>
+                </tr>
+                <tr>
+                    <td><strong>Outros</strong> (EBS, CloudWatch, etc)</td>
+                    <td>-</td>
+                    <td>$12.39</td>
+                    <td>5%</td>
+                </tr>
+                <tr>
+                    <td><strong>TOTAL (sem DR)</strong></td>
+                    <td colspan="2" style="text-align: center;"><strong>~$235/mês</strong></td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td><strong>TOTAL (com DR posture)</strong></td>
+                    <td colspan="2" style="text-align: center;"><strong>~$250-300/mês</strong></td>
+                    <td>-</td>
+                </tr>
+            </table>
+
+            <h3>Anualizado</h3>
+            <div class="metric-box">
+                <div class="label">Custo Anual Estimado</div>
+                <div class="number">$3,000-3,600</div>
+                <div class="label">(Primary + DR + Observabilidade)</div>
+            </div>
+
+            <h3>Recomendações de Otimização</h3>
+            <ol>
+                <li><strong>Reserved Instances:</strong> RDS + NAT → Economizar 40-60%</li>
+                <li><strong>Auto-scaling:</strong> EKS nodes scale down em off-peak</li>
+                <li><strong>DynamoDB On-Demand:</strong> Picos ocasionais vs Provisioned</li>
+                <li><strong>Cost Anomaly Detection:</strong> via AWS Budgets</li>
+            </ol>
+
+            <p><strong>Economia Potencial:</strong> -15% = $37.50/mês (~$450/ano)</p>
+
+            <div class="date">Data: 28 de Julho de 2026</div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO DR -->
+    <div class="page-break"></div>
+    <div class="container">
+        <div class="section">
+            <h1>🛡️ Segurança e Disaster Recovery</h1>
+
+            <h2>Performance Characteristics & Non-Functional Requirements (PCN)</h2>
+
+            <h3>RPO (Recovery Point Objective)</h3>
+            <p>Quantidade máxima de dados que podemos perder em caso de desastre.</p>
+
+            <table>
+                <tr>
+                    <th>Componente</th>
+                    <th>RPO</th>
+                    <th>Método</th>
+                </tr>
+                <tr>
+                    <td><strong>RDS PostgreSQL</strong></td>
+                    <td><span class="highlight">5 minutos</span></td>
+                    <td>Read-replica com streaming replication</td>
+                </tr>
+                <tr>
+                    <td><strong>DynamoDB</strong></td>
+                    <td><span class="highlight">&lt; 1 segundo</span></td>
+                    <td>Global Tables (replicação nativa)</td>
+                </tr>
+                <tr>
+                    <td><strong>EBS Volumes</strong></td>
+                    <td>15 minutos</td>
+                    <td>AWS Backup snapshots</td>
+                </tr>
+                <tr>
+                    <td><strong>Application Code</strong></td>
+                    <td>&lt; 1 segundo</td>
+                    <td>ECR replicated</td>
+                </tr>
+            </table>
+
+            <h3>RTO (Recovery Time Objective)</h3>
+            <p>Tempo máximo para recuperação após um desastre.</p>
+
+            <table>
+                <tr>
+                    <th>Passo</th>
+                    <th>Tempo</th>
+                    <th>Ação</th>
+                </tr>
+                <tr>
+                    <td>1. Detectar failover</td>
+                    <td>2 min</td>
+                    <td>Health check falha em CloudWatch</td>
+                </tr>
+                <tr>
+                    <td>2. Promover RDS replica</td>
+                    <td>3 min</td>
+                    <td>AWS RDS API call</td>
+                </tr>
+                <tr>
+                    <td>3. Scale EKS DR</td>
+                    <td>5 min</td>
+                    <td>Aumentar node group 1→3 nodes</td>
+                </tr>
+                <tr>
+                    <td>4. Update DNS/ALB</td>
+                    <td>1 min</td>
+                    <td>Route53 change</td>
+                </tr>
+                <tr>
+                    <td>5. Verificar saúde</td>
+                    <td>2 min</td>
+                    <td>Health checks pass</td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align: center;"><strong>TOTAL RTO</strong></td>
+                    <td><strong>~15 minutos</strong></td>
+                </tr>
+            </table>
+
+            <h3>Padrão DR: Warm Standby (Skeleton)</h3>
+
+            <table>
+                <tr>
+                    <th>Aspecto</th>
+                    <th>Primary (us-east-1)</th>
+                    <th>DR (us-west-2)</th>
+                </tr>
+                <tr>
+                    <td><strong>EKS Nodes</strong></td>
+                    <td>2-3 (production)</td>
+                    <td>1 (skeleton)</td>
+                </tr>
+                <tr>
+                    <td><strong>RDS</strong></td>
+                    <td>Primary database</td>
+                    <td>Read-replica (standby)</td>
+                </tr>
+                <tr>
+                    <td><strong>DynamoDB</strong></td>
+                    <td>Active</td>
+                    <td>Global Tables Replica</td>
+                </tr>
+                <tr>
+                    <td><strong>SQS</strong></td>
+                    <td>Active queue</td>
+                    <td>Separate (messages lost)</td>
+                </tr>
+                <tr>
+                    <td><strong>Custo mensal</strong></td>
+                    <td>~$235</td>
+                    <td>~$65</td>
+                </tr>
+            </table>
+
+            <h3>Estratégia de Failover</h3>
+
+            <div class="flow-diagram">Fase 1: Detecção (Automática)
+├─ CloudWatch detecta primary region outage
+├─ SNS notifica on-call engineer
+└─ Alertmanager dispara CRITICAL
+
+Fase 2: Decisão (Manual)
+├─ On-call verifica scope da falha
+├─ Contata stakeholders (ONGs)
+└─ Aprova failover
+
+Fase 3: Execução (10-15 min)
+├─ Promover RDS read-replica
+├─ Scale EKS nodes (1→3)
+├─ Update Route53 DNS
+└─ Sync ArgoCD
+
+Fase 4: Validação (2-5 min)
+├─ Health checks pass
+├─ Smoke tests executados
+└─ Stakeholders confirmam acesso
+            </div>
+
+            <div class="date">Data: 28 de Julho de 2026</div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO ITSM/AOPS -->
+    <div class="page-break"></div>
+    <div class="container">
+        <div class="section">
+            <h1>🔧 ITSM/AIOps — Incident Management Lifecycle</h1>
+
+            <h2>Ciclo de Vida de Incidentes</h2>
+
+            <div class="flow-diagram">[1] DETECÇÃO      ──→   [2] TRIAGEM        ──→  [3] MITIGAÇÃO
+              │                   │                   │
+Prometheus rules            On-call avalia          Auto: workflow
+New Relic AIOps             severidade real         self-healing
+AWS Health Dashboard        Cria warroom Discord    Manual: runbook
+              │                   │                   │
+              ▼                   ▼                   ▼
+          Alertmanager        PagerDuty incidente  Cluster opera
+         │                        │
+         ├─→ PagerDuty (ITSM)     │
+         ├─→ Discord (ChatOps)    │
+         └─→ GH Actions self-heal │
+                                  │
+                                  ▼
+[4] COMUNICAÇÃO       ←──  [5] RESOLUÇÃO       ←──  [6] POST-MORTEM
+
+Status page externa         SLO + Error Budget       Doc blameless
+Email diretoria             validacao                Action items
+Discord time interno        APM Service Map sai      Schedule review
+Twitter / Instagram         do vermelho
+            </div>
+
+            <h3>Fase 1: Detecção (0-2 min)</h3>
+
+            <table>
+                <tr>
+                    <th>Fonte</th>
+                    <th>Tipo</th>
+                    <th>O que detecta</th>
+                </tr>
+                <tr>
+                    <td><strong>Prometheus PrometheusRules</strong></td>
+                    <td>Métricas</td>
+                    <td>Erros 5xx, latência P95, pod crash</td>
+                </tr>
+                <tr>
+                    <td><strong>New Relic Applied Intelligence</strong></td>
+                    <td>AIOps</td>
+                    <td>Anomalias comportamentais</td>
+                </tr>
+                <tr>
+                    <td><strong>AWS Health Dashboard</strong></td>
+                    <td>Infra</td>
+                    <td>Falha regional/AZ na AWS</td>
+                </tr>
+                <tr>
+                    <td><strong>Velero Backup</strong></td>
+                    <td>DR</td>
+                    <td>Backup diário falhou (RPO em risco)</td>
+                </tr>
+            </table>
+
+            <h3>Roteamento de Alertas (Alertmanager)</h3>
+            <div class="code-block">critical  ──→  PagerDuty (cria incidente)
+              + Discord (visibilidade)
+              + GitHub Actions (self-heal)
+
+warning   ──→  Discord apenas
+
+SLO burn  ──→  PagerDuty imediato
+              + Discord
+              + Escalação SRE
+            </div>
+
+            <h3>Fase 2: Triagem (2-5 min)</h3>
+            <p>SRE on-call recebe page do PagerDuty. Checklist rápido:</p>
+            <ol>
+                <li>Confirmar via Grafana — alerta é real?</li>
+                <li>Verificar AWS Status Page — incidente regional?</li>
+                <li>Olhar New Relic Service Map — qual componente é a causa raiz?</li>
+                <li>Determinar severidade real (SEV-1/2/3)</li>
+                <li>Abrir war-room no Discord</li>
+                <li>Acknowledge no PagerDuty</li>
+            </ol>
+
+            <h3>Matriz de Severidade</h3>
+            <table>
+                <tr>
+                    <th>Severidade</th>
+                    <th>Impacto</th>
+                    <th>Usuários Afetados</th>
+                    <th>RTO</th>
+                </tr>
+                <tr>
+                    <td><strong>P1</strong></td>
+                    <td>Total</td>
+                    <td>Todos (0% availability)</td>
+                    <td>30 min</td>
+                </tr>
+                <tr>
+                    <td><strong>P2</strong></td>
+                    <td>Alta</td>
+                    <td>Parcial (Donation service down)</td>
+                    <td>1-2 horas</td>
+                </tr>
+                <tr>
+                    <td><strong>P3</strong></td>
+                    <td>Média</td>
+                    <td>Funcionalidade degradada</td>
+                    <td>4 horas</td>
+                </tr>
+                <tr>
+                    <td><strong>P4</strong></td>
+                    <td>Baixa</td>
+                    <td>Cosmético/UI</td>
+                    <td>Próximo sprint</td>
+                </tr>
+            </table>
+
+            <h3>Fase 3: Mitigação</h3>
+            <div class="alert">
+                <strong>🤖 Auto-Remediation:</strong> Webhook-receiver → GitHub Actions → self-healing.yaml
+                → kubectl rollout restart → tempo total: ~3 minutos
+            </div>
+
+            <h3>Fase 5: Resolução</h3>
+            <ol>
+                <li>Marcar como resolved em PagerDuty</li>
+                <li>Atualizar status no Slack/Discord</li>
+                <li>Agendar Post-Incident Review (24h)</li>
+            </ol>
+
+            <h3>Fase 6: Post-Mortem</h3>
+            <ol>
+                <li>Reunião do time (24h após resolução)</li>
+                <li>Timeline da falha + root cause</li>
+                <li>Items de ação (correções)</li>
+                <li>Atualizar runbooks</li>
+                <li>Melhorar alertas/SLOs se necessário</li>
+            </ol>
+
+            <div class="date">Data: 28 de Julho de 2026</div>
+        </div>
+    </div>
+
+    <!-- CONCLUSÃO -->
+    <div class="page-break"></div>
+    <div class="container">
+        <div class="section">
+            <h1>✅ Conclusão</h1>
+
+            <p>A plataforma SolidaryTech foi arquitetada seguindo <strong>best practices</strong> de engenharia de plataforma moderna:</p>
+
+            <div class="metric-box" style="background: #f0fdf4;">
+                <div class="label">✅ SRE — Confiabilidade</div>
+                <div style="font-size: 14px; color: #1F2937;">SLO 99.9% + Auto-healing + Error Budget</div>
+            </div>
+
+            <div class="metric-box" style="background: #eff6ff;">
+                <div class="label">💰 FinOps — Custos Controlados</div>
+                <div style="font-size: 14px; color: #1F2937;">Tags estruturadas + Forecast + Otimizações</div>
+            </div>
+
+            <div class="metric-box" style="background: #fef3c7;">
+                <div class="label">🛡️ DR — Resiliência</div>
+                <div style="font-size: 14px; color: #1F2937;">RTO 15min + RPO 5min (RDS) / <1s (DynamoDB)</div>
+            </div>
+
+            <div class="metric-box" style="background: #f5e6ff;">
+                <div class="label">🔧 ITSM/AIOps — Operações</div>
+                <div style="font-size: 14px; color: #1F2937;">Ciclo de vida completo + Auto-remediation</div>
+            </div>
+
+            <h2>Documentação Técnica Completa</h2>
+            <ul>
+                <li><strong>SRE:</strong> docs/SRE-SLO.md</li>
+                <li><strong>FinOps:</strong> docs/FINOPS-REPORT.md</li>
+                <li><strong>DR:</strong> docs/DR-STRATEGY.md + docs/PCN.md</li>
+                <li><strong>ITSM:</strong> docs/ITSM-LIFECYCLE.md</li>
+                <li><strong>Deployment:</strong> docs/DEPLOYMENT-GUIDE.md</li>
+                <li><strong>Relatório Final:</strong> docs/RELATORIO-ENTREGA-FINAL.md</li>
+            </ul>
+
+            <h2>Links Principais</h2>
+            <p><strong>📌 Repositório:</strong> https://github.com/dsrdantas/TC5-ST</p>
+            <p><strong>📽️ Vídeo:</strong> https://github.com/dsrdantas/TC5-ST/blob/main/docs/tc5-st.mp4</p>
+
+            <p style="margin-top: 60px; text-align: center; font-size: 18px; color: #2563EB;">
+                <strong>SolidaryTech — Tecnologia a serviço da generosidade<br>e impacto social</strong>
+            </p>
+
+            <div class="date">Documento gerado: 28 de Julho de 2026</div>
+        </div>
+    </div>
+</body>
+</html>

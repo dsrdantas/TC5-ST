@@ -15,7 +15,7 @@
 ### Links de Referência
 
 - **Repositório de Código**: https://github.com/dsrdantas/TC5-ST
-- **Vídeo de Apresentação**: [Link do vídeo]
+- **Vídeo de Apresentação**: https://github.com/dsrdantas/TC5-ST/blob/main/docs/tc5-st.mp4
 - **Documentação Técnica**: https://github.com/dsrdantas/TC5-ST/tree/main/docs
 
 ---
