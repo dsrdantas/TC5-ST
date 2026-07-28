@@ -87,7 +87,7 @@ stringData:
       # ----------------------------------------------------------------
       - name: 'solidarytech-critical'
         pagerduty_configs:
-          - routing_key: 'f346325d728f450cc01b4f6d3345623b'
+          - routing_key: 'c92c5e2aee55410fc0ebbd23eeb4ccf5'
             severity: critical
             description: '[CRITICAL] {{ .CommonLabels.alertname }} — {{ .CommonLabels.service }}'
             details:
