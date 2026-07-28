@@ -37,6 +37,15 @@ Bem-vindo à documentação técnica do projeto SolidaryTech. Abaixo está o map
 - MTTR reduction via self-healing
 - Dashboard Grafana pronto
 
+### [SELF-HEALING-SETUP.md](SELF-HEALING-SETUP.md)
+**Auto-Recovery Setup — Automático via GitHub Actions + Webhook**
+- GitHub PAT (Personal Access Token) setup
+- Webhook receiver (pod no cluster)
+- Alertmanager → GitHub Actions API integration
+- Auto-healing para PodCrashLooping, HighErrorRate5xx, SLOFastBurn
+- Testing & troubleshooting
+- Reduz MTTR de 10min → 3min
+
 ### [ITSM-LIFECYCLE.md](ITSM-LIFECYCLE.md)
 **Incident Management & Operações**
 - Runbooks para cenários comuns

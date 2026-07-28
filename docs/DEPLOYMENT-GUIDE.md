@@ -264,6 +264,21 @@ terraform init -backend=false
 terraform validate
 ```
 
+### DB init jobs rodando múltiplas vezes
+
+```bash
+# Jobs foram corrigidos para:
+# - Verificar se schema já existe (idempotência)
+# - ttlSecondsAfterFinished: 86400 (24h, não 5min)
+# - parallelism: 1, completions: 1 (garantia de execução única)
+
+# Se ainda houver problema, deletar job antigo:
+kubectl delete job donation-db-init -n solidarytech
+kubectl delete job ngo-db-init -n solidarytech
+
+# ArgoCD vai recriá-lo (mas desta vez com idempotência)
+```
+
 ---
 
 ## 🔧 Customizações Comuns
@@ -307,6 +322,44 @@ Edite `gitops/monitoring/alerting/alertmanager-config.yaml` com seu webhook.
 - [ ] API health check respondendo
 - [ ] Logs visíveis em Loki
 - [ ] Alertmanager online
+
+---
+
+## 🤖 Auto-Healing (Opcional)
+
+Para ativar auto-recovery de pods em caso de erro crítico:
+
+```bash
+# 1. Gerar GitHub PAT
+# → https://github.com/settings/tokens/new
+# Escopo: repo
+# Expiration: 90 dias
+
+# 2. Criar secret no cluster
+kubectl create secret generic github-webhook-token \
+  --namespace monitoring \
+  --from-literal=token="ghp_seu_token_aqui"
+
+# 3. Webhook receiver já está em gitops/monitoring/alerting/webhook-receiver.yaml
+# ArgoCD sincroniza automaticamente
+
+# 4. Testar (opcional)
+gh workflow run self-healing.yaml \
+  --repo dsrdantas/TC5-ST \
+  -f service=donation-service \
+  -f reason="Test"
+```
+
+**Quando dispara:**
+- `PodCrashLooping` — >3 restarts em 15min
+- `HighErrorRate5xx` — >5% de erros em 2min
+- `DonationSLOFastBurn` — Error budget queimando rápido
+
+**Status:**
+- ✅ **CONCLUÍDO**: Pod restart bem-sucedido (Discord notificado)
+- ❌ **FALHOU**: Escalação para on-call (Discord + PagerDuty)
+
+Ver [SELF-HEALING-SETUP.md](SELF-HEALING-SETUP.md) para detalhes completos.
 
 ---
 

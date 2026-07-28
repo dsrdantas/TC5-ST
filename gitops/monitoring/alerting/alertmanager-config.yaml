@@ -83,7 +83,7 @@ stringData:
 
       # ----------------------------------------------------------------
       # Critical: PagerDuty (ITSM) + Discord (visibilidade) + GitHub
-      #           Actions (self-healing via repository_dispatch)
+      #           Actions (self-healing via webhook-receiver → workflow_dispatch)
       # ----------------------------------------------------------------
       - name: 'solidarytech-critical'
         pagerduty_configs:
@@ -105,11 +105,11 @@ stringData:
               *Summary:* {{ .Annotations.summary }}
               *Description:* {{ .Annotations.description }}
               {{ end }}
-        # Self-Healing direct webhook removido — Alertmanager payload nao bate
-        # com repository_dispatch nativamente. Workflow self-healing.yaml usa
-        # workflow_dispatch (manual via `gh workflow run` ou UI do GitHub).
-        # Para integracao webhook->repository_dispatch automatica, precisa
-        # middleware (alertmanager-webhook-server, kube-webhook-relay, etc.).
+        # Self-Healing via webhook bridge (webhook-receiver)
+        # Dispara workflow_dispatch do GitHub Actions via API com GitHub PAT
+        webhook_configs:
+          - url: 'http://webhook-receiver.monitoring.svc.cluster.local:8080/webhook'
+            send_resolved: false
 
       # ----------------------------------------------------------------
       # Warning: apenas Discord

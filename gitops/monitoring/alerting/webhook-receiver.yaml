@@ -1,0 +1,174 @@
+---
+# Webhook receiver — converte alertas do Alertmanager em GitHub Actions workflow_dispatch
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webhook-receiver-script
+  namespace: monitoring
+data:
+  receiver.sh: |
+    #!/bin/bash
+    # Webhook receiver para disparar self-healing via GitHub Actions
+    # Recebe JSON do Alertmanager, extrai dados, dispara workflow via API
+
+    set -e
+
+    GITHUB_TOKEN="${GITHUB_TOKEN}"
+    GITHUB_REPO="${GITHUB_REPO}"  # dsrdantas/TC5-ST
+    GITHUB_WORKFLOW="self-healing.yaml"
+
+    # Validar env vars
+    if [ -z "$GITHUB_TOKEN" ] || [ -z "$GITHUB_REPO" ]; then
+      echo "ERROR: GITHUB_TOKEN e GITHUB_REPO sao obrigatorios"
+      exit 1
+    fi
+
+    # Ler JSON do stdin (enviado por Alertmanager)
+    read -r json_payload
+
+    # Parse do JSON (extrai primeiro alerta)
+    alertname=$(echo "$json_payload" | jq -r '.alerts[0].labels.alertname // "unknown"')
+    severity=$(echo "$json_payload" | jq -r '.alerts[0].labels.severity // "warning"')
+    service=$(echo "$json_payload" | jq -r '.alerts[0].labels.service // "donation-service"')
+    description=$(echo "$json_payload" | jq -r '.alerts[0].annotations.description // "Auto-triggered by Alertmanager webhook"')
+
+    echo "[$(date)] Webhook recebido: alert=$alertname severity=$severity service=$service"
+
+    # Decidir se dispara self-healing (só para alertas CRÍTICOS de crash/error-rate)
+    should_heal=false
+    case "$alertname" in
+      PodCrashLooping|HighErrorRate5xx|DonationSLOFastBurn)
+        should_heal=true
+        ;;
+      *)
+        echo "⚠️  Alert $alertname nao dispara self-healing (manual only)"
+        exit 0
+        ;;
+    esac
+
+    if [ "$should_heal" = "true" ]; then
+      echo "✅ Disparando self-healing para $service..."
+
+      # Chamar GitHub Actions API para disparar workflow_dispatch
+      curl -sS -X POST \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/repos/$GITHUB_REPO/actions/workflows/$GITHUB_WORKFLOW/dispatches" \
+        -d @- <<EOF
+    {
+      "ref": "main",
+      "inputs": {
+        "service": "$service",
+        "reason": "Auto-heal via Alertmanager: $alertname ($severity) — $description"
+      }
+    }
+    EOF
+
+      if [ $? -eq 0 ]; then
+        echo "✅ Workflow_dispatch enviado com sucesso"
+      else
+        echo "❌ Erro ao disparar workflow"
+        exit 1
+      fi
+    fi
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: webhook-receiver
+  namespace: monitoring
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-receiver
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: webhook-receiver
+    app.kubernetes.io/component: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: webhook-receiver
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: webhook-receiver
+        app.kubernetes.io/component: monitoring
+    spec:
+      serviceAccountName: webhook-receiver
+      containers:
+        - name: receiver
+          image: curlimages/curl:latest
+          # Rodando nc (netcat) para simples HTTP server (Busybox minimal)
+          command:
+            - sh
+            - -c
+            - |
+              apk add --no-cache bash jq
+              while true; do
+                {
+                  read -r method path protocol
+                  while read -r header; do
+                    [ -z "$header" ] && break
+                  done
+
+                  if [ "$method" = "POST" ] && [ "$path" = "/webhook" ]; then
+                    read -r body
+                    export GITHUB_TOKEN="$GITHUB_TOKEN"
+                    export GITHUB_REPO="$GITHUB_REPO"
+                    echo "$body" | bash /scripts/receiver.sh
+                    echo -ne "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK"
+                  else
+                    echo -ne "HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\n\r\nNot Found"
+                  fi
+                } | nc -l -p 8080 -w 1
+              done
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-webhook-token
+                  key: token
+            - name: GITHUB_REPO
+              value: "dsrdantas/TC5-ST"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: webhook-receiver-script
+            defaultMode: 0755
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-receiver
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: webhook-receiver
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: webhook-receiver

@@ -86,6 +86,34 @@ Limpeza completa e segura
 5. Delete Security Groups
 6. Terraform destroy
 
+### 5. **Self-Healing** (`self-healing.yaml`)
+Auto-recovery de pods via GitHub Actions
+
+**Dispara automaticamente quando:**
+- `PodCrashLooping` — >3 restarts em 15min
+- `HighErrorRate5xx` — >5% de erros em 2min
+- `DonationSLOFastBurn` — Error budget queimando rápido
+
+**Fluxo:**
+```
+Prometheus detecta erro crítico
+    ↓
+Alertmanager → Webhook Receiver (pod no cluster)
+    ↓
+GitHub Actions API (com GitHub PAT)
+    ↓
+self-healing.yaml dispara (workflow_dispatch)
+    ↓
+kubectl rollout restart deployment/<service>
+    ↓
+Discord notificado (✅ ou ❌)
+```
+
+**Setup necessário:**
+- [Gerar GitHub PAT](https://github.com/settings/tokens/new) (escopo: `repo`)
+- Criar secret: `kubectl create secret generic github-webhook-token --namespace monitoring --from-literal=token="ghp_xxx"`
+- Ver [SELF-HEALING-SETUP.md](docs/SELF-HEALING-SETUP.md) para detalhes completos
+
 ---
 
 ## 📋 Pré-requisitos para Deploy
@@ -548,6 +576,34 @@ Dashboard: `Solidarytech Overview`
 - HighErrorRate5xx: >1% errors
 - DonationLatencyP95High: P95 > 500ms
 ```
+
+## 🤖 Auto-Healing (MTTR Reduction)
+
+**Self-Healing automático** dispara para alertas críticos:
+
+| Alert | Condição | Ação |
+|-------|----------|------|
+| PodCrashLooping | >3 restarts/15min | `kubectl rollout restart` |
+| HighErrorRate5xx | >5% erros/2min | Restart pod |
+| DonationSLOFastBurn | Error budget < 2h | Restart pod |
+
+**Fluxo:**
+1. Prometheus detecta (30s scrape)
+2. Alertmanager avalia (30s group_wait)
+3. Webhook Receiver → GitHub Actions API
+4. `self-healing.yaml` executa (workflow_dispatch)
+5. Pod reinicia, logs em Discord
+6. Tempo total: ~3 minutos
+
+**Setup:**
+- Gerar [GitHub PAT](https://github.com/settings/tokens/new) (escopo: `repo`)
+- `kubectl create secret generic github-webhook-token --namespace monitoring --from-literal=token="ghp_xxx"`
+- Ver [SELF-HEALING-SETUP.md](docs/SELF-HEALING-SETUP.md)
+
+**Resultados esperados:**
+- ✅ Reduz MTTR (Mean Time To Recovery) de 10min → 3min
+- ✅ Logs em Discord para visibilidade
+- ✅ Falha após 2 tentativas → escala para on-call
 
 ## 🌍 Disaster Recovery Strategy
 

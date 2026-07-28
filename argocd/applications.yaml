@@ -117,3 +117,37 @@ spec:
       selfHeal: true
     syncOptions:
       - ServerSideApply=true
+
+---
+# Monitoring stack: Prometheus, Grafana, Loki, Alertmanager, Webhook Receiver
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: solidarytech
+  source:
+    repoURL: https://github.com/<GITHUB_USER>/TC5-ST
+    targetRevision: main
+    path: gitops/monitoring
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  ignoreDifferences:
+    # Ignorar mudanças de status/resourceVersion em Helm resources
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /status
