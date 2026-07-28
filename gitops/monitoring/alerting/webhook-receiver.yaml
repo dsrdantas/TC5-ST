@@ -12,8 +12,8 @@ data:
     import sys
     import os
     from http.server import HTTPServer, BaseHTTPRequestHandler
-    import subprocess
-    from urllib.parse import urlparse
+    import urllib.request
+    import urllib.error
 
     GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
     GITHUB_REPO = os.getenv('GITHUB_REPO', 'dsrdantas/TC5-ST')
@@ -82,28 +82,44 @@ data:
                 return
 
             url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/{GITHUB_WORKFLOW}/dispatches"
-            payload_json = json.dumps({
+            payload = {
                 "ref": "main",
                 "inputs": {
                     "service": service,
                     "reason": f"Auto-heal via Alertmanager: {alertname} ({severity}) — {description}"
                 }
-            })
+            }
+            payload_json = json.dumps(payload).encode('utf-8')
 
-            cmd = [
-                'curl', '-sS', '-X', 'POST',
-                '-H', f'Authorization: token {GITHUB_TOKEN}',
-                '-H', 'Accept: application/vnd.github.v3+json',
-                '-H', 'Content-Type: application/json',
-                '-d', payload_json,
-                url
-            ]
+            print(f"[GitHub] URL: {url}")
+            print(f"[GitHub] Service: {service}, Workflow: {GITHUB_WORKFLOW}")
 
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode == 0:
-                print("✅ Workflow_dispatch enviado com sucesso")
-            else:
-                print(f"❌ Erro ao disparar workflow: {result.stderr}")
+            headers = {
+                'Authorization': f'token {GITHUB_TOKEN[:10]}...',  # Log apenas primeiros 10 chars
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            }
+
+            try:
+                print(f"[GitHub] Enviando POST para {url}...")
+                req = urllib.request.Request(url, data=payload_json, headers=headers, method='POST')
+                with urllib.request.urlopen(req) as response:
+                    if response.status in [200, 201, 204]:
+                        print("✅ Workflow_dispatch enviado com sucesso")
+                        return True
+                    else:
+                        print(f"⚠️  Status inesperado: {response.status}")
+                        return False
+            except urllib.error.HTTPError as e:
+                print(f"❌ Erro HTTP {e.code}: {e.reason}")
+                print(f"[DEBUG] Response: {e.read().decode('utf-8')}")
+                return False
+            except urllib.error.URLError as e:
+                print(f"❌ Erro de conexão: {e.reason}")
+                return False
+            except Exception as e:
+                print(f"❌ Erro desconhecido: {type(e).__name__}: {e}")
+                return False
 
         def log_message(self, format, *args):
             # Suppress default logging
